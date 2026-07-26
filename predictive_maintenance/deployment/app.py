@@ -7,8 +7,8 @@ import joblib
 @st.cache_resource
 def load_model():
     model_path = hf_hub_download(
-        repo_id="BalaSVenkat/predictive-maintanence-model",
-        filename="mlops_predictive_maintanence_model.joblib"
+        repo_id="BalaSVenkat/predictive-maintenance-model",
+        filename="mlops_predictive_maintenance_model.joblib"
     )
     return joblib.load(model_path)
 
@@ -16,8 +16,12 @@ model = load_model()
 
 # Streamlit UI
 st.title("🚗 Predictive Maintenance for Engine Health")
-st.markdown(
-    "Enter the engine sensor readings below to predict whether the engine requires maintenance."
+st.info(
+    """
+Enter the engine sensor readings below.
+
+The model will predict whether the engine is operating normally or requires maintenance based on historical sensor patterns.
+"""
 )
 
 # Sensor Details
