@@ -13,7 +13,7 @@ from huggingface_hub import HfApi
 
 # Define constants for the dataset and output paths
 api = HfApi(token=os.getenv("HF_TOKEN"))
-DATASET_PATH = "hf://datasets/BalaSVenkat/predictive-maintanence-dataset/engine_state.csv"
+DATASET_PATH = "hf://datasets/BalaSVenkat/predictive-maintanence-dataset/engine_data.csv"
 maintanence_dataset = pd.read_csv(DATASET_PATH)
 print("Dataset loaded successfully from Hugging Face.")
 print(f"Initial Dataset Shape: {maintanence_dataset.shape}")
