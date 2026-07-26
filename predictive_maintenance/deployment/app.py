@@ -1,0 +1,54 @@
+import streamlit as st
+import pandas as pd
+from huggingface_hub import hf_hub_download
+import joblib
+
+# Download the model from Hugging Face Hub and Load the trained model
+@st.cache_resource
+def load_model():
+    model_path = hf_hub_download(
+        repo_id="BalaSVenkat/predictive-maintanence-model",
+        filename="mlops_predictive_maintanence_model.joblib"
+    )
+    return joblib.load(model_path)
+
+model = load_model()
+
+# Streamlit UI
+st.title("🚗 Predictive Maintenance for Engine Health")
+st.markdown(
+    "Enter the engine sensor readings below to predict whether the engine requires maintenance."
+)
+
+# Sensor Details
+engine_rpm = st.number_input( "Engine RPM", min_value=61.0, max_value=2239.0, value=791.24, step=1.0)
+lub_oil_pressure = st.number_input("Lubricating Oil Pressure (bar)", min_value=0.003, max_value=7.266, value=3.304, step=0.01, format="%.3f")
+fuel_pressure = st.number_input("Fuel Pressure (bar)", min_value=0.003, max_value=21.138, value=6.656, step=0.01, format="%.3f")
+coolant_pressure = st.number_input("Coolant Pressure (bar)", min_value=0.002, max_value=7.479, value=2.335, step=0.01, format="%.3f")
+lub_oil_temp = st.number_input("Lubricating Oil Temperature (°C)", min_value=71.322, max_value=89.581, value=77.643, step=0.1, format="%.3f")
+coolant_temp = st.number_input("Coolant Temperature (°C)", min_value=61.673, max_value=195.528, value=78.427, step=0.1, format="%.3f")
+
+# Prepare input data
+input_data = pd.DataFrame([{
+    "engine_rpm": engine_rpm,
+    "lub_oil_pressure": lub_oil_pressure,
+    "fuel_pressure": fuel_pressure,
+    "coolant_pressure": coolant_pressure,
+    "lub_oil_temp": lub_oil_temp,
+    "coolant_temp": coolant_temp
+}])
+
+# Classification threshold
+classification_threshold = 0.5
+
+# -----------------------------
+# Prediction
+# -----------------------------
+if st.button("Predict"):
+    prediction_proba = model.predict_proba(input_data)[0, 1]
+    prediction = (prediction_proba >= classification_threshold).astype(int)
+
+    if prediction == 1:
+        st.success("✅ The machine will not fail.")
+    else:
+        st.error("❌ The machine is likely to fail.")
