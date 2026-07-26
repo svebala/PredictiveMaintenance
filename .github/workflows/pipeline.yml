@@ -1,4 +1,4 @@
-name: Predictive Maintanence Pipeline 
+name: Predictive Maintenance Pipeline 
 
 on:
   push:
@@ -16,15 +16,15 @@ jobs:
         with:
           python-version: '3.9'
           cache: 'pip' # Automatically caches based on your requirements.txt file
-          cache-dependency-path: 'predictive_maintanence/requirements.txt'
+          cache-dependency-path: 'predictive_maintenance/requirements.txt'
 
       - name: Install Dependencies
-        run: pip install -r predictive_maintanence/requirements.txt
+        run: pip install -r predictive_maintenance/requirements.txt
         
       - name: Upload Dataset to Hugging Face Hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: python predictive_maintanence/model_building/data_register.py
+        run: python predictive_maintenance/model_building/data_register.py
 
   data-prep:
     needs: register-dataset
@@ -37,15 +37,15 @@ jobs:
         with:
           python-version: '3.9'
           cache: 'pip'
-          cache-dependency-path: 'predictive_maintanence/requirements.txt'
+          cache-dependency-path: 'predictive_maintenance/requirements.txt'
 
       - name: Install Dependencies
-        run: pip install -r predictive_maintanence/requirements.txt
+        run: pip install -r predictive_maintenance/requirements.txt
         
       - name: Run Data Preparation
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: python predictive_maintanence/model_building/prep.py
+        run: python predictive_maintenance/model_building/prep.py
 
   model-training:
     needs: data-prep
@@ -59,10 +59,10 @@ jobs:
         with:
           python-version: '3.9'
           cache: 'pip'
-          cache-dependency-path: 'predictive_maintanence/requirements.txt'
+          cache-dependency-path: 'predictive_maintenance/requirements.txt'
 
       - name: Install Dependencies
-        run: pip install -r predictive_maintanence/requirements.txt
+        run: pip install -r predictive_maintenance/requirements.txt
         
       - name: Start MLflow Server
         run: |
@@ -72,7 +72,7 @@ jobs:
       - name: Model Building
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: python predictive_maintanence/model_building/train.py
+        run: python predictive_maintenance/model_building/train.py
 
   deploy-hosting:
     runs-on: ubuntu-latest
@@ -85,12 +85,12 @@ jobs:
         with:
           python-version: '3.9'
           cache: 'pip'
-          cache-dependency-path: 'predictive_maintanence/requirements.txt'
+          cache-dependency-path: 'predictive_maintenance/requirements.txt'
 
       - name: Install Dependencies
-        run: pip install -r predictive_maintanence/requirements.txt
+        run: pip install -r predictive_maintenance/requirements.txt
         
       - name: Push files to Frontend Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: python predictive_maintanence/hosting/hosting.py
+        run: python predictive_maintenance/hosting/hosting.py
