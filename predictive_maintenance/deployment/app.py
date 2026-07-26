@@ -3,6 +3,14 @@ import pandas as pd
 from huggingface_hub import hf_hub_download
 import joblib
 
+st.write("Checkpoint 1")
+# Set page configuration
+st.set_page_config(
+    page_title="Predictive Maintenance",
+    page_icon="🚗",
+    layout="centered"
+)
+
 # Download the model from Hugging Face Hub and Load the trained model
 @st.cache_resource
 def load_model():
@@ -12,15 +20,23 @@ def load_model():
     )
     return joblib.load(model_path)
 
-model = load_model()
+try:
+    model = load_model()
+    st.write("Checkpoint 2")
+    st.success("✅ Model loaded successfully")
+except Exception as e:
+    st.exception(e)
+    st.stop()
 
 # Streamlit UI
 st.title("🚗 Predictive Maintenance for Engine Health")
+
 st.info(
     """
 Enter the engine sensor readings below.
 
-The model will predict whether the engine is operating normally or requires maintenance based on historical sensor patterns.
+The trained machine learning model will analyze the sensor readings
+and predict whether the engine is operating normally or requires maintenance.
 """
 )
 
@@ -42,17 +58,24 @@ input_data = pd.DataFrame([{
     "coolant_temp": coolant_temp
 }])
 
+st.write("Checkpoint 3")
+
 # Classification threshold
 classification_threshold = 0.5
 
-# -----------------------------
 # Prediction
-# -----------------------------
-if st.button("Predict"):
+if st.button("Predict", use_container_width=True):
+
     prediction_proba = model.predict_proba(input_data)[0, 1]
-    prediction = (prediction_proba >= classification_threshold).astype(int)
+    prediction = int(prediction_proba >= classification_threshold)
+
+    # Display prediction probability
+    st.metric(
+        label="Probability of Normal Engine Condition",
+        value=f"{prediction_proba:.2%}"
+    )
 
     if prediction == 1:
-        st.success("✅ The machine will not fail.")
+        st.success("✅ Engine is operating normally. No immediate maintenance is required.")
     else:
-        st.error("❌ The machine is likely to fail.")
+        st.error("⚠️ Engine requires maintenance. Please inspect the engine at the earliest opportunity.")
