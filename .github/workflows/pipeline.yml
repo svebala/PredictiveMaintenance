@@ -1,4 +1,4 @@
-name: Predictive Maintanence Pipeline
+name: Predictive Maintanence Pipeline 
 
 on:
   push:
