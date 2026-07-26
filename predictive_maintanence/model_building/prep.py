@@ -13,7 +13,7 @@ from huggingface_hub import HfApi
 
 # Define constants for the dataset and output paths
 api = HfApi(token=os.getenv("HF_TOKEN"))
-DATASET_PATH = "hf://datasets/BalaSVenkat/predictive-maintanence-dataset/tourism.csv"
+DATASET_PATH = "hf://datasets/BalaSVenkat/predictive-maintanence-dataset/engine_state.csv"
 maintanence_dataset = pd.read_csv(DATASET_PATH)
 print("Dataset loaded successfully from Hugging Face.")
 print(f"Initial Dataset Shape: {maintanence_dataset.shape}")
@@ -51,7 +51,7 @@ Xtest.to_csv("Xtest.csv",index=False)
 ytrain.to_csv("ytrain.csv",index=False)
 ytest.to_csv("ytest.csv",index=False)
 
-files = ["cleaned_tourism.csv","Xtrain.csv","Xtest.csv","ytrain.csv","ytest.csv"]
+files = ["Xtrain.csv","Xtest.csv","ytrain.csv","ytest.csv"]
 
 for file_path in files:
     api.upload_file(
