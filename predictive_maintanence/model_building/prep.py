@@ -18,6 +18,19 @@ maintanence_dataset = pd.read_csv(DATASET_PATH)
 print("Dataset loaded successfully from Hugging Face.")
 print(f"Initial Dataset Shape: {maintanence_dataset.shape}")
 
+# Convert all attribute names to small letter and replace spaces with underscores
+maintanence_dataset.columns = maintanence_dataset.columns.str.lower().str.replace(' ', '_')
+
+# Handle Missing Values
+numeric_cols = maintanence_dataset.select_dtypes(include=["int64", "float64"]).columns
+
+# Numerical columns -> Median Imputation
+for col in numeric_cols:
+    maintanence_dataset[col] = maintanence_dataset[col].fillna(maintanence_dataset[col].median())
+
+# Save Cleaned Dataset
+maintanence_dataset.to_csv("cleaned_engine_data.csv",index=False)
+
 # Define the target variable for the classification task
 target = 'engine_condition'
 
@@ -51,7 +64,7 @@ Xtest.to_csv("Xtest.csv",index=False)
 ytrain.to_csv("ytrain.csv",index=False)
 ytest.to_csv("ytest.csv",index=False)
 
-files = ["Xtrain.csv","Xtest.csv","ytrain.csv","ytest.csv"]
+files = ["cleaned_engine_data.csv","Xtrain.csv","Xtest.csv","ytrain.csv","ytest.csv"]
 
 for file_path in files:
     api.upload_file(
