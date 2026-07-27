@@ -1,20 +1,23 @@
+# Use a minimal base image with Python 3.9 installed
 FROM python:3.9
 
-# Create non-root user
-RUN useradd -m -u 1000 user
-
-# Working directory
+# Set the working directory inside the container to /app
 WORKDIR /app
 
-# Copy project
+# Copy all files from the current directory on the host to the container's /app directory
 COPY . .
 
-# Install dependencies as root
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies listed in requirements.txt
+RUN pip3 install -r requirements.txt
 
-# Switch to non-root user
+RUN useradd -m -u 1000 user
 USER user
+ENV HOME=/home/user \
+	PATH=/home/user/.local/bin:$PATH
 
-EXPOSE 8501
+WORKDIR $HOME/app
 
-CMD ["streamlit", "run", "app.py", "--server.address=0.0.0.0", "--server.port=8501", "--server.headless=true"]
+COPY --chown=user . $HOME/app
+
+# Define the command to run the Streamlit app on port "8501" and make it accessible externally
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.enableXsrfProtection=false"]
