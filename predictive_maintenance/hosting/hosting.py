@@ -6,7 +6,7 @@ api = HfApi(token=os.getenv("HF_TOKEN"))
 
 # Upload to Hugging Face
 # repo_id="BalaSVenkat/predictive-maintenance-space"
-repo_id="BalaSVenkat/tourism-package-space"
+repo_id="BalaSVenkat/predictive-maintenance-space"
 repo_type="space"
 
 # Check if the space exists
