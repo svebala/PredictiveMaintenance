@@ -140,7 +140,7 @@ if st.button("Run Diagnostics", use_container_width=True):
             f"{CLASSIFICATION_THRESHOLD:.0%}"
         )
 
-    st.progress(min(prediction_proba, 1.0))
+    st.progress(float(prediction_proba))
 
     # Risk classification
     if prediction_proba < LOW_RISK_THRESHOLD:
