@@ -1,11 +1,25 @@
 import streamlit as st
 import pandas as pd
-from huggingface_hub import hf_hub_download
 import joblib
+import plotly.graph_objects as go
 from datetime import datetime
+from zoneinfo import ZoneInfo
+from huggingface_hub import hf_hub_download
 
 LOW_RISK_THRESHOLD = 0.20
 CLASSIFICATION_THRESHOLD = 0.35
+
+# Define the IST timezone
+IST = ZoneInfo("Asia/Kolkata")
+
+SENSOR_LABELS = {
+    "engine_rpm": "Engine RPM (rpm)",
+    "lub_oil_pressure": "Lubricating Oil Pressure (bar)",
+    "fuel_pressure": "Fuel Pressure (bar)",
+    "coolant_pressure": "Coolant Pressure (bar)",
+    "lub_oil_temp": "Lubricating Oil Temperature (°C)",
+    "coolant_temp": "Coolant Temperature (°C)"
+}
 
 # Set page configuration
 st.set_page_config(
@@ -68,14 +82,11 @@ div[data-testid="stError"] {
 # Streamlit UI
 st.title("🚗 Engine Predictive Maintenance")
 
-st.info(
-    """
+st.info("""
 Enter the engine sensor readings below.
 
-The trained machine learning model will analyze the sensor readings
-and predict whether the engine is operating normally or requires maintenance.
-"""
-)
+The trained machine learning model analyzes these readings to estimate the probability that the engine requires maintenance and provides an appropriate maintenance recommendation.
+""")
 
 # Download the model from Hugging Face Hub and Load the trained model
 @st.cache_resource
@@ -92,8 +103,6 @@ except Exception as e:
     st.error("Unable to load prediction model.")
     st.exception(e)
     st.stop()
-
-st.header("Enter Engine Sensor Readings")
 
 # Sensor Details
 left, right = st.columns(2)
@@ -136,11 +145,36 @@ if st.button("Run Diagnostics", use_container_width=True):
 
     with col2:
         st.metric(
-            "Decision Threshold",
-            f"{CLASSIFICATION_THRESHOLD:.0%}"
+            "Healthy Probability",
+            f"{healthy_prob:.2f}%"
         )
 
-    st.progress(float(prediction_proba))
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=float(maintenance_prob),
+        number={"suffix": "%"},
+        title={"text": "<b>Engine Maintenance Risk</b>"},
+        gauge={
+            "axis": {"range": [0, 100]},
+            "bar": {"color": "#F57C00"},
+            "steps": [
+                {"range": [0, 20], "color": "#E8F5E9"},
+                {"range": [20, 35], "color": "#FFF8E1"},
+                {"range": [35, 100], "color": "#FFEBEE"}
+            ],
+            "threshold": {
+                "line": {"color": "#C62828", "width": 5},
+                "value": CLASSIFICATION_THRESHOLD * 100
+            }
+        }
+    ))
+
+    fig.update_layout(
+        height=320,
+        margin=dict(l=20, r=20, t=60, b=20)
+    )
+
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
     # Risk classification
     if prediction_proba < LOW_RISK_THRESHOLD:
@@ -190,50 +224,6 @@ if st.button("Run Diagnostics", use_container_width=True):
         
     st.divider()
 
-    st.header("Diagnostic Results")
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.metric(
-            label="✅ Healthy Engine",
-            value=f"{healthy_prob:.2f}%"
-        )
-
-    with col2:
-        st.metric(
-            label="⚠️ Maintenance Required",
-            value=f"{maintenance_prob:.2f}%"
-        )
-
-    st.divider()
-
-    st.subheader("Summary")
-
-    if prediction_proba < LOW_RISK_THRESHOLD:
-
-        st.markdown("""
-    - **Prediction:** Healthy Engine
-    - **Risk Level:** Low
-    - **Recommendation:** Continue normal operation and routine monitoring.
-    """)
-
-    elif prediction_proba < CLASSIFICATION_THRESHOLD:
-
-        st.markdown("""
-    - **Prediction:** Moderate Risk
-    - **Risk Level:** Moderate
-    - **Recommendation:** Monitor engine performance and inspect critical systems.
-    """)
-
-    else:
-
-        st.markdown("""
-    - **Prediction:** Maintenance Required
-    - **Risk Level:** High
-    - **Recommendation:** Schedule maintenance as soon as possible.
-    """)
-        
     with st.expander("View Submitted Sensor Readings"):
       
         sensor_df = (
@@ -241,22 +231,12 @@ if st.button("Run Diagnostics", use_container_width=True):
             .rename(columns={0: "Reading"})
             .rename_axis("Sensor")
         )
-        sensor_df.rename(
-            index={
-                "engine_rpm": "Engine RPM (rpm)",
-                "lub_oil_pressure": "Lubricating Oil Pressure (bar)",
-                "fuel_pressure": "Fuel Pressure (bar)",
-                "coolant_pressure": "Coolant Pressure (bar)",
-                "lub_oil_temp": "Lubricating Oil Temperature (°C)",
-                "coolant_temp": "Coolant Temperature (°C)"
-            },
-            inplace=True
-        )
+        sensor_df.rename(index=SENSOR_LABELS, inplace=True)
         st.dataframe(sensor_df, use_container_width=True)
 
     st.caption(
         f"Diagnostics generated on: "
-        f"{datetime.now().strftime('%d %b %Y, %I:%M %p')}"
+        f"{datetime.now(IST).strftime('%d %b %Y, %I:%M %p')} IST"
     )
 
 st.divider()
