@@ -1,11 +1,7 @@
 
 import os
 from huggingface_hub import HfApi, create_repo
-
-try:
-    from huggingface_hub.errors import RepositoryNotFoundError
-except ImportError:
-    RepositoryNotFoundError = Exception
+from huggingface_hub.errors import RepositoryNotFoundError
 
 # Configuration
 HF_SPACE_REPO = "BalaSVenkat/predictive-maintenance-space"
