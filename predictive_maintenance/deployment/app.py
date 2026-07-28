@@ -2,6 +2,10 @@ import streamlit as st
 import pandas as pd
 from huggingface_hub import hf_hub_download
 import joblib
+from datetime import datetime
+
+LOW_RISK_THRESHOLD = 0.20
+CLASSIFICATION_THRESHOLD = 0.35
 
 # Set page configuration
 st.set_page_config(
@@ -40,12 +44,6 @@ h2, h3 {
     color: #1F4E79;
 }
 
-</style>
-""", unsafe_allow_html=True)
-
-st.markdown("""
-<style>
-
 /* Success box */
 div[data-testid="stSuccess"] {
     background-color: #E8F5E9;
@@ -67,6 +65,18 @@ div[data-testid="stError"] {
 </style>
 """, unsafe_allow_html=True)
 
+# Streamlit UI
+st.title("🚗 Engine Predictive Maintenance")
+
+st.info(
+    """
+Enter the engine sensor readings below.
+
+The trained machine learning model will analyze the sensor readings
+and predict whether the engine is operating normally or requires maintenance.
+"""
+)
+
 # Download the model from Hugging Face Hub and Load the trained model
 @st.cache_resource
 def load_model():
@@ -78,30 +88,25 @@ def load_model():
 
 try:
     model = load_model()
-    st.success("✅ Model loaded successfully")
 except Exception as e:
+    st.error("Unable to load prediction model.")
     st.exception(e)
     st.stop()
 
-# Streamlit UI
-st.title("🚗 Predictive Maintenance for Engine Health")
-
-st.info(
-    """
-Enter the engine sensor readings below.
-
-The trained machine learning model will analyze the sensor readings
-and predict whether the engine is operating normally or requires maintenance.
-"""
-)
+st.header("Enter Engine Sensor Readings")
 
 # Sensor Details
-engine_rpm = st.number_input( "Engine RPM", min_value=61, max_value=2239, value=791, step=1)
-lub_oil_pressure = st.number_input("Lubricating Oil Pressure (bar)", min_value=0.003, max_value=7.266, value=3.304, step=0.01, format="%.3f")
-fuel_pressure = st.number_input("Fuel Pressure (bar)", min_value=0.003, max_value=21.138, value=6.656, step=0.01, format="%.3f")
-coolant_pressure = st.number_input("Coolant Pressure (bar)", min_value=0.002, max_value=7.479, value=2.335, step=0.01, format="%.3f")
-lub_oil_temp = st.number_input("Lubricating Oil Temperature (°C)", min_value=71.322, max_value=89.581, value=77.643, step=0.1, format="%.3f")
-coolant_temp = st.number_input("Coolant Temperature (°C)", min_value=61.673, max_value=195.528, value=78.427, step=0.1, format="%.3f")
+left, right = st.columns(2)
+
+with left:
+    engine_rpm = st.number_input("Engine RPM", min_value=61, max_value=2239, value=791, step=1, help="Rotational speed of the engine in revolutions per minute.")
+    lub_oil_pressure = st.number_input("Lubricating Oil Pressure (bar)", min_value=0.003, max_value=7.266, value=3.304, step=0.01, format="%.3f", help="Pressure of the engine's lubricating oil system.")
+    fuel_pressure = st.number_input("Fuel Pressure (bar)", min_value=0.003, max_value=21.138, value=6.656, step=0.01, format="%.3f", help="Fuel pressure supplied to the engine.")
+
+with right:
+    coolant_pressure = st.number_input("Coolant Pressure (bar)", min_value=0.002, max_value=7.479, value=2.335, step=0.01, format="%.3f", help="Pressure within the engine cooling system.")
+    lub_oil_temp = st.number_input("Lubricating Oil Temperature (°C)", min_value=71.322, max_value=89.581, value=77.643, step=0.1, format="%.3f", help="Temperature of the lubricating oil.")
+    coolant_temp = st.number_input("Coolant Temperature (°C)", min_value=61.673, max_value=195.528, value=78.427, step=0.1, format="%.3f", help="Temperature of the engine coolant.")
 
 # Prepare input data
 input_data = pd.DataFrame([{
@@ -113,25 +118,32 @@ input_data = pd.DataFrame([{
     "coolant_temp": coolant_temp
 }])
 
-# Classification threshold
-classification_threshold = 0.35
-
 # Prediction
 if st.button("Run Diagnostics", use_container_width=True):
 
     prediction_proba = model.predict_proba(input_data)[0, 1]
-    prediction = int(prediction_proba >= classification_threshold)
-
+    maintenance_prob = prediction_proba * 100
+    healthy_prob = (1 - prediction_proba) * 100
+    
     # Display prediction probability
-    st.metric(
-        label="Probability of Engine Requiring Maintenance",
-        value=f"{prediction_proba:.2%}"
-    )
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.metric(
+            "Maintenance Probability",
+            f"{maintenance_prob:.2f}%"
+        )
+
+    with col2:
+        st.metric(
+            "Decision Threshold",
+            f"{CLASSIFICATION_THRESHOLD:.0%}"
+        )
 
     st.progress(min(prediction_proba, 1.0))
 
     # Risk classification
-    if prediction_proba < 0.20:
+    if prediction_proba < LOW_RISK_THRESHOLD:
 
         st.success("🟢 Healthy Engine")
 
@@ -146,14 +158,14 @@ if st.button("Run Diagnostics", use_container_width=True):
     - Monitor sensor readings periodically
     """)
 
-    elif prediction_proba < classification_threshold:
+    elif prediction_proba < CLASSIFICATION_THRESHOLD:
 
         st.warning("🟡 Moderate Risk")
 
         st.markdown(f"""
     The engine is showing **early signs of abnormal behaviour**.
 
-    Current fault probability is **{prediction_proba:.2%}**, which is below the decision threshold of **{classification_threshold:.0%}**.
+    Current fault probability is **{prediction_proba:.2%}**, which is below the decision threshold of **{CLASSIFICATION_THRESHOLD:.0%}**.
 
     **Recommended Action**
     - Monitor engine performance closely
@@ -166,7 +178,7 @@ if st.button("Run Diagnostics", use_container_width=True):
         st.error("🔴 High Risk – Maintenance Required")
 
         st.markdown(f"""
-    The estimated probability of engine failure is **{prediction_proba:.2%}**, which exceeds the decision threshold of **{classification_threshold:.0%}**.
+    The estimated probability of engine failure is **{prediction_proba:.2%}**, which exceeds the decision threshold of **{CLASSIFICATION_THRESHOLD:.0%}**.
 
     **Recommended Action**
     - Schedule maintenance immediately
@@ -175,3 +187,81 @@ if st.button("Run Diagnostics", use_container_width=True):
     - Check fuel pressure
     - Perform a complete engine inspection
     """)
+        
+    st.divider()
+
+    st.header("Diagnostic Results")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.metric(
+            label="✅ Healthy Engine",
+            value=f"{healthy_prob:.2f}%"
+        )
+
+    with col2:
+        st.metric(
+            label="⚠️ Maintenance Required",
+            value=f"{maintenance_prob:.2f}%"
+        )
+
+    st.divider()
+
+    st.subheader("Summary")
+
+    if prediction_proba < LOW_RISK_THRESHOLD:
+
+        st.markdown("""
+    - **Prediction:** Healthy Engine
+    - **Risk Level:** Low
+    - **Recommendation:** Continue normal operation and routine monitoring.
+    """)
+
+    elif prediction_proba < CLASSIFICATION_THRESHOLD:
+
+        st.markdown("""
+    - **Prediction:** Moderate Risk
+    - **Risk Level:** Moderate
+    - **Recommendation:** Monitor engine performance and inspect critical systems.
+    """)
+
+    else:
+
+        st.markdown("""
+    - **Prediction:** Maintenance Required
+    - **Risk Level:** High
+    - **Recommendation:** Schedule maintenance as soon as possible.
+    """)
+        
+    with st.expander("View Submitted Sensor Readings"):
+      
+        sensor_df = (
+            input_data.T
+            .rename(columns={0: "Reading"})
+            .rename_axis("Sensor")
+        )
+        sensor_df.rename(
+            index={
+                "engine_rpm": "Engine RPM (rpm)",
+                "lub_oil_pressure": "Lubricating Oil Pressure (bar)",
+                "fuel_pressure": "Fuel Pressure (bar)",
+                "coolant_pressure": "Coolant Pressure (bar)",
+                "lub_oil_temp": "Lubricating Oil Temperature (°C)",
+                "coolant_temp": "Coolant Temperature (°C)"
+            },
+            inplace=True
+        )
+        st.dataframe(sensor_df, use_container_width=True)
+
+    st.caption(
+        f"Diagnostics generated on: "
+        f"{datetime.now().strftime('%d %b %Y, %I:%M %p')}"
+    )
+
+st.divider()
+
+st.caption(
+    "Predictions are intended to support maintenance decisions and "
+    "should not replace physical inspection."
+)
