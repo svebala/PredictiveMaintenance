@@ -140,8 +140,8 @@ if st.button("Run Diagnostics", use_container_width=True):
     with col1:
         st.metric(
             label="Maintenance Probability",
-            value=f"{prediction_proba:.1%}",
-            delta=f"{prediction_proba - CLASSIFICATION_THRESHOLD:+.1%} vs threshold",
+            value=f"{prediction_proba:.2%}",
+            delta=f"{prediction_proba - CLASSIFICATION_THRESHOLD:+.2%} vs threshold",
             delta_color="inverse",
         )
 
