@@ -27,7 +27,7 @@ MODEL_FILENAME = "engine_predictive_maintenance_model.joblib"
 MODEL_REPO_TYPE = "model"
 ## MLflow
 MLFLOW_TRACKING_URI = "http://localhost:5000"
-MLFLOW_EXPERIMENT_NAME = "mlops-predictive-maintenance"
+MLFLOW_EXPERIMENT_NAME = "engine-predictive-maintenance"
 MLFLOW_ARTIFACT_PATH = "model"
 ## Model
 RANDOM_STATE = 42

@@ -1,58 +1,77 @@
 import streamlit as st
 import pandas as pd
-import joblib
 from huggingface_hub import hf_hub_download
-from datetime import datetime
+import joblib
 
-st.set_page_config(page_title="Predictive Maintenance",page_icon="🚗",layout="wide")
-HF_REPO="BalaSVenkat/predictive-maintenance-model"
-MODEL_FILE="mlops_predictive_maintenance_model.joblib"
-THRESHOLD=0.35
-CFG={
-"engine_rpm":{"label":"Engine RPM","physical":(61.0,2239.0),"operating":(380.0,1565.0),"default":791.24,"step":1.0,"unit":"RPM"},
-"lub_oil_pressure":{"label":"Lubricating Oil Pressure","physical":(0.003,7.266),"operating":(0.86,5.61),"default":3.304,"step":0.01,"unit":"bar"},
-"fuel_pressure":{"label":"Fuel Pressure","physical":(0.003,21.138),"operating":(1.40,16.16),"default":6.656,"step":0.01,"unit":"bar"},
-"coolant_pressure":{"label":"Coolant Pressure","physical":(0.002,7.479),"operating":(0.72,5.95),"default":2.335,"step":0.01,"unit":"bar"},
-"lub_oil_temp":{"label":"Lubricating Oil Temperature","physical":(71.322,89.581),"operating":(73.41,87.35),"default":77.643,"step":0.1,"unit":"°C"},
-"coolant_temp":{"label":"Coolant Temperature","physical":(61.673,195.528),"operating":(65.74,91.78),"default":78.427,"step":0.1,"unit":"°C"}}
+# Set page configuration
+st.set_page_config(
+    page_title="Predictive Maintenance",
+    page_icon="🚗",
+    layout="centered"
+)
+
+# Download the model from Hugging Face Hub and Load the trained model
 @st.cache_resource
 def load_model():
- p=hf_hub_download(repo_id=HF_REPO,filename=MODEL_FILE);return joblib.load(p)
-def validate(v):
- e=[];w=[]
- for k,x in v.items():
-  p=CFG[k]["physical"];o=CFG[k]["operating"]
-  if x<p[0] or x>p[1]:e.append(CFG[k]["label"])
-  elif x<o[0] or x>o[1]:w.append(CFG[k]["label"])
- return e,w
-model=load_model()
-with st.sidebar:
- st.header("Model");st.write("Class 1 = Faulty");st.write(f"Threshold: {THRESHOLD:.0%}")
-st.title("🚗 Engine Predictive Maintenance")
-vals={}
-c1,c2=st.columns(2)
-for i,(k,c) in enumerate(CFG.items()):
- col=c1 if i<3 else c2
- with col:
-  st.markdown(f"**{c['label']} ({c['unit']})**")
-  vals[k]=st.slider(c["label"],float(c["physical"][0]),float(c["physical"][1]),float(c["default"]),step=float(c["step"]),label_visibility="collapsed")
-if st.button("Run Diagnostics",use_container_width=True):
- err,warn=validate(vals)
- if err:
-  st.error("Invalid physical readings: "+", ".join(err));st.stop()
- X=pd.DataFrame([vals])
- p=float(model.predict_proba(X)[0,1]);fault=p>=THRESHOLD
- a,b=st.columns([2,1])
- with a:
-  st.subheader("Diagnostic Result")
-  st.error(f"⚠️ Faulty Engine ({p:.1%})") if fault else st.success(f"✅ Healthy Engine ({p:.1%})")
-  if warn: st.warning("Outside operating range: "+", ".join(warn))
-  st.subheader("Recommended Action")
-  st.write("- Schedule maintenance\n- Inspect lubrication\n- Inspect cooling") if fault else st.write("- Continue monitoring")
- with b:
-  st.metric("Fault Probability",f"{p:.1%}",delta=f"{p-THRESHOLD:+.1%}")
-  st.progress(min(p,1.0))
- with st.expander("Sensor Readings"):
-  st.dataframe(pd.DataFrame([vals]).T.rename(columns={0:"Value"}))
- st.caption(datetime.now().strftime("%d-%b-%Y %H:%M:%S"))
-st.divider();st.caption("Decision support only.")
+    model_path = hf_hub_download(
+        repo_id="BalaSVenkat/predictive-maintenance-model",
+        filename="mlops_predictive_maintenance_model.joblib"
+    )
+    return joblib.load(model_path)
+
+try:
+    model = load_model()
+    st.success("✅ Model loaded successfully")
+except Exception as e:
+    st.exception(e)
+    st.stop()
+
+# Streamlit UI
+st.title("🚗 Predictive Maintenance for Engine Health")
+
+st.info(
+    """
+Enter the engine sensor readings below.
+
+The trained machine learning model will analyze the sensor readings
+and predict whether the engine is operating normally or requires maintenance.
+"""
+)
+
+# Sensor Details
+engine_rpm = st.number_input( "Engine RPM", min_value=61.0, max_value=2239.0, value=791.24, step=1.0)
+lub_oil_pressure = st.number_input("Lubricating Oil Pressure (bar)", min_value=0.003, max_value=7.266, value=3.304, step=0.01, format="%.3f")
+fuel_pressure = st.number_input("Fuel Pressure (bar)", min_value=0.003, max_value=21.138, value=6.656, step=0.01, format="%.3f")
+coolant_pressure = st.number_input("Coolant Pressure (bar)", min_value=0.002, max_value=7.479, value=2.335, step=0.01, format="%.3f")
+lub_oil_temp = st.number_input("Lubricating Oil Temperature (°C)", min_value=71.322, max_value=89.581, value=77.643, step=0.1, format="%.3f")
+coolant_temp = st.number_input("Coolant Temperature (°C)", min_value=61.673, max_value=195.528, value=78.427, step=0.1, format="%.3f")
+
+# Prepare input data
+input_data = pd.DataFrame([{
+    "engine_rpm": engine_rpm,
+    "lub_oil_pressure": lub_oil_pressure,
+    "fuel_pressure": fuel_pressure,
+    "coolant_pressure": coolant_pressure,
+    "lub_oil_temp": lub_oil_temp,
+    "coolant_temp": coolant_temp
+}])
+
+# Classification threshold
+classification_threshold = 0.35
+
+# Prediction
+if st.button("Run Diagnostics", use_container_width=True):
+
+    prediction_proba = model.predict_proba(input_data)[0, 1]
+    prediction = int(prediction_proba >= classification_threshold)
+
+    # Display prediction probability
+    st.metric(
+        label="Probability of Engine Requiring Maintenance",
+        value=f"{prediction_proba:.2%}"
+    )
+
+    if prediction == 1:
+        st.error("⚠️ Engine requires maintenance. Please inspect the engine at the earliest opportunity.")
+    else:
+        st.success("✅ Engine is operating normally. No immediate maintenance is required.")
