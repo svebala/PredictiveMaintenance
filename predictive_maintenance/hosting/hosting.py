@@ -1,26 +1,44 @@
 
-from huggingface_hub import HfApi
 import os
+from huggingface_hub import HfApi, create_repo, RepositoryNotFoundError
 
-api = HfApi(token=os.getenv("HF_TOKEN"))
+# Configuration
+HF_SPACE_REPO = "BalaSVenkat/predictive-maintenance-space"
+HF_REPO_TYPE = "space"
+DEPLOYMENT_FOLDER = "predictive_maintenance/deployment"
 
-# Upload to Hugging Face
-# repo_id="BalaSVenkat/predictive-maintenance-space"
-repo_id="BalaSVenkat/predictive-maintenance-space"
-repo_type="space"
+# Get token information
+HF_TOKEN = os.getenv("HF_TOKEN")
+if not HF_TOKEN:
+    raise ValueError("HF_TOKEN environment variable is not set.")
 
-# Check if the space exists
+# Authenticate with Hugging Face
+api = HfApi(token=HF_TOKEN)
+
+# Ensure the Hugging Face Space exists
 try:
-    api.repo_info(repo_id=repo_id, repo_type=repo_type)
-    print(f"Space '{repo_id}' already exists. Using it.")
+    api.repo_info(
+        repo_id=HF_SPACE_REPO,
+        repo_type=HF_REPO_TYPE
+    )
+    print(f"Space '{HF_SPACE_REPO}' already exists. Using it.")
 except RepositoryNotFoundError:
-    print(f"Space '{repo_id}' not found. Creating new space...")
-    create_repo(repo_id=repo_id, repo_type=repo_type, private=False)
-    print(f"Space '{repo_id}' created.")
+    print(f"Space '{HF_SPACE_REPO}' not found. Creating new space...")
 
+    create_repo(
+        repo_id=HF_SPACE_REPO,
+        repo_type=HF_REPO_TYPE,
+        private=False
+    )
+
+    print(f"Space '{HF_SPACE_REPO}' created successfully.")
+
+# Upload deployment files to the Space
 api.upload_folder(
-    folder_path="predictive_maintenance/deployment",     # the local folder containing your files
-    repo_id=repo_id,                                     # the target repo
-    repo_type=repo_type,                                 # dataset, model, or space
-    path_in_repo="",                                     # optional: subfolder path inside the repo
+    folder_path=DEPLOYMENT_FOLDER,
+    repo_id=HF_SPACE_REPO,
+    repo_type=HF_REPO_TYPE,
+    path_in_repo=""
 )
+
+print(f"Deployment uploaded successfully to '{HF_SPACE_REPO}'.")

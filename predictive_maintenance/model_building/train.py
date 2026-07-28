@@ -1,12 +1,12 @@
 import pandas as pd
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.preprocessing import StandardScaler
 from sklearn.compose import make_column_transformer
 from sklearn.pipeline import make_pipeline
 
 # for model training, tuning, and evaluation
 import xgboost as xgb
 from sklearn.model_selection import GridSearchCV
-from sklearn.metrics import accuracy_score, classification_report, recall_score
+from sklearn.metrics import classification_report
 
 # for model serialization
 import joblib
@@ -15,24 +15,41 @@ import joblib
 import os
 
 # for hugging face space authentication to upload files
-from huggingface_hub import login, HfApi, create_repo
-from huggingface_hub.utils import RepositoryNotFoundError, HfHubHTTPError
+from huggingface_hub import HfApi, create_repo
+from huggingface_hub.utils import RepositoryNotFoundError
 import mlflow
 
-mlflow.set_tracking_uri("http://localhost:5000")
-mlflow.set_experiment("mlops-predictive-maintenance")
+# Parameters
+## Hugging Face
+HF_DATASET_REPO = "BalaSVenkat/predictive-maintenance-dataset"
+HF_MODEL_REPO = "BalaSVenkat/predictive-maintenance-model"
+MODEL_FILENAME = "engine_predictive_maintenance_model.joblib"
+MODEL_REPO_TYPE = "model"
+## MLflow
+MLFLOW_TRACKING_URI = "http://localhost:5000"
+MLFLOW_EXPERIMENT_NAME = "mlops-predictive-maintenance"
+MLFLOW_ARTIFACT_PATH = "model"
+## Model
+RANDOM_STATE = 42
+CLASSIFICATION_THRESHOLD = 0.35 # Lower decision threshold to prioritize recall. In predictive maintenance, missing a faulty engine (false negative) is generally more costly than raising an unnecessary maintenance alert (false positive).
+CV_FOLDS = 5
+N_JOBS = -1
+
+mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
 
 api = HfApi(token=os.getenv("HF_TOKEN"))
 
-Xtrain_path = "hf://datasets/BalaSVenkat/predictive-maintenance-dataset/Xtrain.csv"
-Xtest_path = "hf://datasets/BalaSVenkat/predictive-maintenance-dataset/Xtest.csv"
-ytrain_path = "hf://datasets/BalaSVenkat/predictive-maintenance-dataset/ytrain.csv"
-ytest_path = "hf://datasets/BalaSVenkat/predictive-maintenance-dataset/ytest.csv"
+# Load processed splits
+XTRAIN_PATH = f"hf://datasets/{HF_DATASET_REPO}/Xtrain.csv"
+XTEST_PATH = f"hf://datasets/{HF_DATASET_REPO}/Xtest.csv"
+YTRAIN_PATH = f"hf://datasets/{HF_DATASET_REPO}/ytrain.csv"
+YTEST_PATH = f"hf://datasets/{HF_DATASET_REPO}/ytest.csv"
 
-Xtrain = pd.read_csv(Xtrain_path)
-Xtest = pd.read_csv(Xtest_path)
-ytrain = pd.read_csv(ytrain_path)
-ytest = pd.read_csv(ytest_path)
+Xtrain = pd.read_csv(XTRAIN_PATH)
+Xtest = pd.read_csv(XTEST_PATH)
+ytrain = pd.read_csv(YTRAIN_PATH)
+ytest = pd.read_csv(YTEST_PATH)
 
 # List of numerical features in the dataset
 numeric_features = [
@@ -48,7 +65,8 @@ numeric_features = [
 numeric_features = [col for col in numeric_features if col in Xtrain.columns]
 
 # Set the class weight to handle class imbalance
-class_weight = ytrain.value_counts().iloc[0] / ytrain.value_counts().iloc[1]
+counts = ytrain.squeeze().value_counts()
+class_weight = counts.loc[0] / counts.loc[1]
 
 # Define the preprocessing steps
 preprocessor = make_column_transformer(
@@ -56,7 +74,7 @@ preprocessor = make_column_transformer(
 )
 
 # Define base XGBoost model
-xgb_model = xgb.XGBClassifier(scale_pos_weight=class_weight, random_state=42)
+xgb_model = xgb.XGBClassifier(scale_pos_weight=class_weight, random_state=RANDOM_STATE)
 
 # Define hyperparameter grid
 param_grid = {
@@ -74,7 +92,7 @@ model_pipeline = make_pipeline(preprocessor, xgb_model)
 # Start MLflow run
 with mlflow.start_run():
     # Hyperparameter tuning
-    grid_search = GridSearchCV(model_pipeline, param_grid, cv=5, n_jobs=-1)
+    grid_search = GridSearchCV(model_pipeline, param_grid, cv=CV_FOLDS, scoring="recall", n_jobs=N_JOBS)
     grid_search.fit(Xtrain, ytrain)
 
     # Log all parameter combinations and their mean test scores
@@ -93,16 +111,27 @@ with mlflow.start_run():
     # Log best parameters separately in main run
     mlflow.log_params(grid_search.best_params_)
 
+    # Log model configuration
+    mlflow.log_params({
+      "classification_threshold": CLASSIFICATION_THRESHOLD,
+      "cv_folds": CV_FOLDS,
+      "random_state": RANDOM_STATE,
+      "scoring_metric": "recall",
+    })
+    mlflow.log_params({
+    "classification_threshold": CLASSIFICATION_THRESHOLD,
+    "cv_folds": CV_FOLDS,
+    "random_state": RANDOM_STATE,
+    "scoring_metric": "recall"})
+
     # Store and evaluate the best model
     best_model = grid_search.best_estimator_
 
-    classification_threshold = 0.45
-
     y_pred_train_proba = best_model.predict_proba(Xtrain)[:, 1]
-    y_pred_train = (y_pred_train_proba >= classification_threshold).astype(int)
+    y_pred_train = (y_pred_train_proba >= CLASSIFICATION_THRESHOLD).astype(int)
 
     y_pred_test_proba = best_model.predict_proba(Xtest)[:, 1]
-    y_pred_test = (y_pred_test_proba >= classification_threshold).astype(int)
+    y_pred_test = (y_pred_test_proba >= CLASSIFICATION_THRESHOLD).astype(int)
 
     train_report = classification_report(ytrain, y_pred_train, output_dict=True)
     test_report = classification_report(ytest, y_pred_test, output_dict=True)
@@ -120,16 +149,15 @@ with mlflow.start_run():
     })
 
     # Save the model locally
-    model_path = "mlops_predictive_maintenance_model.joblib"
-    joblib.dump(best_model, model_path)
+    joblib.dump(best_model, MODEL_FILENAME)
 
     # Log the model artifact
-    mlflow.log_artifact(model_path, artifact_path="model")
-    print(f"Model saved as artifact at: {model_path}")
+    mlflow.log_artifact(MODEL_FILENAME, artifact_path=MLFLOW_ARTIFACT_PATH)
+    print(f"Model saved as artifact at: {MODEL_FILENAME}")
 
     # Upload to Hugging Face
-    repo_id = "BalaSVenkat/predictive-maintenance-model"
-    repo_type = "model"
+    repo_id = HF_MODEL_REPO
+    repo_type = MODEL_REPO_TYPE
 
     # Check if the model exists
     try:
@@ -142,8 +170,8 @@ with mlflow.start_run():
 
     # create_repo("churn-model", repo_type="model", private=False)
     api.upload_file(
-        path_or_fileobj="mlops_predictive_maintenance_model.joblib",
-        path_in_repo="mlops_predictive_maintenance_model.joblib",
+        path_or_fileobj=MODEL_FILENAME,
+        path_in_repo=MODEL_FILENAME,
         repo_id=repo_id,
         repo_type=repo_type,
     )
