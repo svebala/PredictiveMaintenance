@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import joblib
-import plotly.graph_objects as go
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from huggingface_hub import hf_hub_download
@@ -131,50 +130,28 @@ input_data = pd.DataFrame([{
 if st.button("Run Diagnostics", use_container_width=True):
 
     prediction_proba = model.predict_proba(input_data)[0, 1]
-    maintenance_prob = prediction_proba * 100
     healthy_prob = (1 - prediction_proba) * 100
+    
+    st.subheader("Diagnostic Results")
     
     # Display prediction probability
     col1, col2 = st.columns(2)
 
     with col1:
         st.metric(
-            "Maintenance Probability",
-            f"{maintenance_prob:.2f}%"
+            label="Maintenance Probability",
+            value=f"{prediction_proba:.1%}",
+            delta=f"{prediction_proba - CLASSIFICATION_THRESHOLD:+.1%} vs threshold",
+            delta_color="inverse",
         )
 
     with col2:
         st.metric(
-            "Healthy Probability",
+            "Normal Operation Probability",
             f"{healthy_prob:.2f}%"
         )
 
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=float(maintenance_prob),
-        number={"suffix": "%"},
-        title={"text": "<b>Engine Maintenance Risk</b>"},
-        gauge={
-            "axis": {"range": [0, 100]},
-            "bar": {"color": "#F57C00"},
-            "steps": [
-                {"range": [0, 20], "color": "#E8F5E9"},
-                {"range": [20, 35], "color": "#FFF8E1"},
-                {"range": [35, 100], "color": "#FFEBEE"}
-            ],
-            "threshold": {
-                "line": {"color": "#C62828", "width": 5},
-                "value": CLASSIFICATION_THRESHOLD * 100
-            }
-        }
-    ))
-
-    fig.update_layout(
-        height=320,
-        margin=dict(l=20, r=20, t=60, b=20)
-    )
-
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.progress(float(prediction_proba), text="Model-estimated maintenance probability")
 
     # Risk classification
     if prediction_proba < LOW_RISK_THRESHOLD:
