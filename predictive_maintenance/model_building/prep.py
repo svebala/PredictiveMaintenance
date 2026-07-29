@@ -68,10 +68,10 @@ y = maintenance_dataset[TARGET_COLUMN]
 
 # Split dataset into train and test
 Xtrain, Xtest, ytrain, ytest = train_test_split(
-    X, y,                       
-    test_size=TEST_SIZE,        
-    random_state=RANDOM_STATE,  
-    stratify=y                  
+    X, y,
+    test_size=TEST_SIZE,
+    random_state=RANDOM_STATE,
+    stratify=y
 )
 
 Xtrain.to_csv(XTRAIN_FILE, index=False)
