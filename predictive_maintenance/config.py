@@ -59,7 +59,7 @@ N_JOBS = -1
 SCORING_METRIC = "recall"
 
 # MLflow
-MLFLOW_TRACKING_URI = "http://localhost:5000"
+MLFLOW_TRACKING_URI = "mlruns"
 MLFLOW_EXPERIMENT_NAME = "engine-predictive-maintenance"
 MLFLOW_ARTIFACT_PATH = "model"
 
