@@ -15,7 +15,7 @@ from huggingface_hub import HfApi
 
 # import constants from config file
 from predictive_maintenance.config import (
-    DATASET_PATH,
+    HF_DATASET_PATH,
     TARGET_COLUMN,
     NUMERIC_FEATURES,
     TEST_SIZE,
@@ -38,7 +38,7 @@ if not HF_TOKEN:
 api = HfApi(token=HF_TOKEN)
 
 # Load dataset from Hugging Face
-maintenance_dataset = pd.read_csv(DATASET_PATH/{DATASET_FILENAME})
+maintenance_dataset = pd.read_csv(HF_DATASET_PATH/{DATASET_FILENAME})
 print("Dataset loaded successfully from Hugging Face.")
 print(f"Initial Dataset Shape: {maintenance_dataset.shape}")
 
