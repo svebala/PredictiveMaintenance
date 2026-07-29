@@ -3,14 +3,6 @@ Trains the predictive maintenance model,
 tracks experiments with MLflow,
 and uploads the trained model to Hugging Face.
 """
-import xgboost
-import sklearn
-
-print("=" * 50)
-print("Training Environment")
-print(f"XGBoost Version     : {xgboost.__version__}")
-print(f"Scikit-learn Version: {sklearn.__version__}")
-print("=" * 50)
 
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
@@ -152,6 +144,20 @@ with mlflow.start_run():
 
     # Store and evaluate the best model
     best_model = grid_search.best_estimator_
+
+    classifier = best_model.named_steps["xgbclassifier"]
+
+    print("=" * 60)
+    print("Model Information")
+    print("=" * 60)
+    print("Estimator :", classifier)
+    print("Classes   :", classifier.classes_)
+    print("n_classes :", classifier.n_classes_)
+    print("Objective :", classifier.get_xgb_params().get("objective"))
+    print("Booster   :", classifier.get_xgb_params().get("booster"))
+    print("Tree Method:", classifier.get_xgb_params().get("tree_method"))
+    print("n_jobs    :", classifier.get_xgb_params().get("n_jobs"))
+    print("=" * 60)
 
     y_pred_train_proba = best_model.predict_proba(Xtrain)[:, 1]
     y_pred_train = (y_pred_train_proba >= CLASSIFICATION_THRESHOLD).astype(int)
