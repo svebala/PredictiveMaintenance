@@ -7,5 +7,5 @@ xgboost==2.1.4
 joblib==1.5.1
 
 # Deployment
-streamlit==1.47.2
+streamlit==1.47.1
 huggingface_hub==0.32.6
