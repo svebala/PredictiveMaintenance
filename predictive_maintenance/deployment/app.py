@@ -5,20 +5,15 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from huggingface_hub import hf_hub_download
 
-LOW_RISK_THRESHOLD = 0.20
-CLASSIFICATION_THRESHOLD = 0.35
-
-# Define the IST timezone
-IST = ZoneInfo("Asia/Kolkata")
-
-SENSOR_LABELS = {
-    "engine_rpm": "Engine RPM (rpm)",
-    "lub_oil_pressure": "Lubricating Oil Pressure (bar)",
-    "fuel_pressure": "Fuel Pressure (bar)",
-    "coolant_pressure": "Coolant Pressure (bar)",
-    "lub_oil_temp": "Lubricating Oil Temperature (°C)",
-    "coolant_temp": "Coolant Temperature (°C)"
-}
+# import constants from config file
+from predictive_maintenance.config import (
+    LOW_RISK_THRESHOLD,
+    CLASSIFICATION_THRESHOLD,
+    TIMEZONE,
+    SENSOR_LABELS,
+    HF_MODEL_REPO,
+    MODEL_FILENAME,
+)
 
 # Set page configuration
 st.set_page_config(
@@ -91,8 +86,8 @@ The trained machine learning model analyzes these readings to estimate the proba
 @st.cache_resource
 def load_model():
     model_path = hf_hub_download(
-        repo_id="BalaSVenkat/predictive-maintenance-model",
-        filename="mlops_predictive_maintenance_model.joblib"
+        repo_id=HF_MODEL_REPO,
+        filename=MODEL_FILENAME
     )
     return joblib.load(model_path)
 
@@ -107,14 +102,14 @@ except Exception as e:
 left, right = st.columns(2)
 
 with left:
-    engine_rpm = st.number_input("Engine RPM", min_value=61, max_value=2239, value=791, step=1, help="Rotational speed of the engine in revolutions per minute.")
-    lub_oil_pressure = st.number_input("Lubricating Oil Pressure (bar)", min_value=0.003, max_value=7.266, value=3.304, step=0.01, format="%.3f", help="Pressure of the engine's lubricating oil system.")
-    fuel_pressure = st.number_input("Fuel Pressure (bar)", min_value=0.003, max_value=21.138, value=6.656, step=0.01, format="%.3f", help="Fuel pressure supplied to the engine.")
+    engine_rpm = st.number_input(SENSOR_LABELS["engine_rpm"], min_value=61, max_value=2239, value=791, step=1, help="Rotational speed of the engine in revolutions per minute.")
+    lub_oil_pressure = st.number_input(SENSOR_LABELS["lub_oil_pressure"], min_value=0.003, max_value=7.266, value=3.304, step=0.01, format="%.3f", help="Pressure of the engine's lubricating oil system.")
+    fuel_pressure = st.number_input(SENSOR_LABELS["fuel_pressure"], min_value=0.003, max_value=21.138, value=6.656, step=0.01, format="%.3f", help="Fuel pressure supplied to the engine.")
 
 with right:
-    coolant_pressure = st.number_input("Coolant Pressure (bar)", min_value=0.002, max_value=7.479, value=2.335, step=0.01, format="%.3f", help="Pressure within the engine cooling system.")
-    lub_oil_temp = st.number_input("Lubricating Oil Temperature (°C)", min_value=71.322, max_value=89.581, value=77.643, step=0.1, format="%.3f", help="Temperature of the lubricating oil.")
-    coolant_temp = st.number_input("Coolant Temperature (°C)", min_value=61.673, max_value=195.528, value=78.427, step=0.1, format="%.3f", help="Temperature of the engine coolant.")
+    coolant_pressure = st.number_input(SENSOR_LABELS["coolant_pressure"], min_value=0.002, max_value=7.479, value=2.335, step=0.01, format="%.3f", help="Pressure within the engine cooling system.")
+    lub_oil_temp = st.number_input(SENSOR_LABELS["lub_oil_temp"], min_value=71.322, max_value=89.581, value=77.643, step=0.1, format="%.3f", help="Temperature of the lubricating oil.")
+    coolant_temp = st.number_input(SENSOR_LABELS["coolant_temp"], min_value=61.673, max_value=195.528, value=78.427, step=0.1, format="%.3f", help="Temperature of the engine coolant.")
 
 # Prepare input data
 input_data = pd.DataFrame([{
@@ -222,7 +217,7 @@ if st.button("Run Diagnostics", use_container_width=True):
 
     st.caption(
         f"Diagnostics generated on: "
-        f"{datetime.now(IST).strftime('%d %b %Y, %I:%M %p')} IST"
+        f"{datetime.now(TIMEZONE).strftime('%d %b %Y, %I:%M %p')} IST"
     )
 
 st.divider()

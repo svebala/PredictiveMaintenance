@@ -1,9 +1,11 @@
+"""
+Prepares the predictive maintenance dataset by
+cleaning, preprocessing, splitting into train/test sets,
+and uploading the processed files to Hugging Face.
+"""
 
 # for data manipulation
 import pandas as pd
-
-# for creating a folder
-import os
 
 # for data preprocessing and pipeline creation
 from sklearn.model_selection import train_test_split
@@ -11,10 +13,32 @@ from sklearn.model_selection import train_test_split
 # for hugging face space authentication to upload files
 from huggingface_hub import HfApi
 
-# Define constants for the dataset and output paths
-api = HfApi(token=os.getenv("HF_TOKEN"))
-DATASET_PATH = "hf://datasets/BalaSVenkat/predictive-maintenance-dataset/engine_data.csv"
-maintenance_dataset = pd.read_csv(DATASET_PATH)
+# import constants from config file
+from predictive_maintenance.config import (
+    DATASET_PATH,
+    TARGET_COLUMN,
+    NUMERIC_FEATURES,
+    TEST_SIZE,
+    RANDOM_STATE,
+    HF_DATASET_REPO,
+    HF_DATASET_TYPE,
+    HF_TOKEN,
+    CLEANED_DATA,
+    XTRAIN_FILE,
+    XTEST_FILE,
+    YTRAIN_FILE,
+    YTEST_FILE,
+)
+
+# Get token information
+if not HF_TOKEN:
+    raise ValueError("HF_TOKEN environment variable is not set.")
+
+# Authenticate with Hugging Face
+api = HfApi(token=HF_TOKEN)
+
+# Load dataset from Hugging Face
+maintenance_dataset = pd.read_csv(DATASET_PATH/{DATASET_FILENAME})
 print("Dataset loaded successfully from Hugging Face.")
 print(f"Initial Dataset Shape: {maintenance_dataset.shape}")
 
@@ -22,7 +46,7 @@ print(f"Initial Dataset Shape: {maintenance_dataset.shape}")
 maintenance_dataset.columns = maintenance_dataset.columns.str.lower().str.replace(' ', '_')
 
 # Handle Missing Values
-numeric_cols = maintenance_dataset.select_dtypes(include=["int64", "float64"]).columns
+numeric_cols = maintenance_dataset.select_dtypes(include="number").columns
 
 # Remove duplicate records (if exist)
 maintenance_dataset = maintenance_dataset.drop_duplicates().reset_index(drop=True)
@@ -33,47 +57,40 @@ for col in numeric_cols:
     maintenance_dataset[col] = maintenance_dataset[col].fillna(maintenance_dataset[col].median())
 
 # Save Cleaned Dataset
-maintenance_dataset.to_csv("cleaned_engine_data.csv",index=False)
+maintenance_dataset.to_csv(CLEANED_DATA, index=False)
 
-# Define the target variable for the classification task
-target = 'engine_condition'
-
-# List of numerical features in the dataset
-numeric_features = [
-    'engine_rpm',       # The number of revolutions per minute (RPM) of the engine, indicating engine speed.
-    'lub_oil_pressure', # The pressure of the lubricating oil in the engine, essential for reducing friction and wear.
-    'fuel_pressure',    # The pressure at which fuel is supplied to the engine, critical for proper combustion.
-    'coolant_pressure', # The pressure of the engine coolant, affecting engine temperature regulation.
-    'lub_oil_temp',     # The temperature of the lubricating oil, which impacts viscosity and engine performance.
-    'coolant_temp'      # The temperature of the engine coolant, crucial for preventing overheating.
-]
-
-# Define predictor matrix (X) using selected numeric and categorical features
-X = maintenance_dataset[numeric_features]
+# Select predictor features
+X = maintenance_dataset[NUMERIC_FEATURES]
 
 # Define target variable
-y = maintenance_dataset[target]
+y = maintenance_dataset[TARGET_COLUMN]
 
 # Split dataset into train and test
-# Split the dataset into training and test sets
 Xtrain, Xtest, ytrain, ytest = train_test_split(
-    X, y,              # Predictors (X) and target variable (y)
-    test_size=0.20,    # 20% of the data is reserved for testing
-    random_state=42,   # Ensures reproducibility by setting a fixed random seed
-    stratify=y         # preserves the same class distribution in both train and test datasets.
+    X, y,                       
+    test_size=TEST_SIZE,        
+    random_state=RANDOM_STATE,  
+    stratify=y                  
 )
 
-Xtrain.to_csv("Xtrain.csv",index=False)
-Xtest.to_csv("Xtest.csv",index=False)
-ytrain.to_csv("ytrain.csv",index=False)
-ytest.to_csv("ytest.csv",index=False)
+Xtrain.to_csv(XTRAIN_FILE, index=False)
+Xtest.to_csv(XTEST_FILE, index=False)
+ytrain.to_csv(YTRAIN_FILE, index=False)
+ytest.to_csv(YTEST_FILE, index=False)
 
-files = ["cleaned_engine_data.csv","Xtrain.csv","Xtest.csv","ytrain.csv","ytest.csv"]
+files = (
+    CLEANED_DATA,
+    XTRAIN_FILE,
+    XTEST_FILE,
+    YTRAIN_FILE,
+    YTEST_FILE,
+)
 
 for file_path in files:
     api.upload_file(
         path_or_fileobj=file_path,
         path_in_repo=file_path.split("/")[-1],  # just the filename
-        repo_id="BalaSVenkat/predictive-maintenance-dataset",
-        repo_type="dataset",
+        repo_id=HF_DATASET_REPO,
+        repo_type=HF_DATASET_TYPE
     )
+print("✅ All processed datasets uploaded successfully.")

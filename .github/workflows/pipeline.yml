@@ -18,6 +18,9 @@ jobs:
           cache: 'pip' # Automatically caches based on your requirements.txt file
           cache-dependency-path: 'predictive_maintenance/requirements.txt'
 
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
       - name: Install Dependencies
         run: pip install -r predictive_maintenance/requirements.txt
 
@@ -38,6 +41,9 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
           cache-dependency-path: 'predictive_maintenance/requirements.txt'
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
 
       - name: Install Dependencies
         run: pip install -r predictive_maintenance/requirements.txt
@@ -61,13 +67,11 @@ jobs:
           cache: 'pip'
           cache-dependency-path: 'predictive_maintenance/requirements.txt'
 
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
       - name: Install Dependencies
         run: pip install -r predictive_maintenance/requirements.txt
-
-      - name: Start MLflow Server
-        run: |
-          nohup mlflow ui --host 0.0.0.0 --port 5000 &  # Run MLflow UI in the background
-          sleep 5  # Wait for a moment to let the server start
 
       - name: Model Building
         env:
@@ -86,6 +90,9 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
           cache-dependency-path: 'predictive_maintenance/requirements.txt'
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
 
       - name: Install Dependencies
         run: pip install -r predictive_maintenance/requirements.txt

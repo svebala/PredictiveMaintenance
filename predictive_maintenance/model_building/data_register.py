@@ -1,28 +1,47 @@
+"""
+Registers the dataset repository on Hugging Face Hub
+and uploads the local dataset.
+"""
 
-import os
 import time
 
 from huggingface_hub.utils import RepositoryNotFoundError, HfHubHTTPError
 from huggingface_hub import HfApi, create_repo
 
-HF_TOKEN = os.getenv("HF_TOKEN")
+# import constants from config file
+from predictive_maintenance.config import (
+    HF_DATASET_REPO,
+    HF_DATASET_TYPE,
+    HF_TOKEN,
+    HF_MAX_RETRIES,
+)
 
-repo_id = "BalaSVenkat/predictive-maintenance-dataset"
-repo_type = "dataset"
+# Get token information
+if not HF_TOKEN:
+    raise ValueError("HF_TOKEN environment variable is not set.")
 
-# Initialize API client
-api = HfApi()
+# Authenticate with Hugging Face
+api = HfApi(token=HF_TOKEN)
 
 # Step 1: Check if the dataset exists
-for attempt in range(5):
+for attempt in range(HF_MAX_RETRIES):
     try:
-        api.repo_info(repo_id=repo_id,repo_type=repo_type,token=HF_TOKEN)
-        print(f"✅ Dataset '{repo_id}' already exists.")
+        api.repo_info(
+            repo_id=HF_DATASET_REPO,
+            repo_type=HF_DATASET_TYPE,
+        )
+        print(f"✅ Dataset '{HF_DATASET_REPO}' already exists.")
         break
 
     except RepositoryNotFoundError:
-        print(f"Dataset '{repo_id}' not found. Creating...")
-        create_repo(repo_id=repo_id,repo_type=repo_type,private=False,token=HF_TOKEN,exist_ok=True)
+        print(f"Dataset '{HF_DATASET_REPO}' not found. Creating...")
+        create_repo(
+            repo_id=HF_DATASET_REPO,
+            repo_type=HF_DATASET_TYPE,
+            private=False,
+            token=HF_TOKEN,
+            exist_ok=True,
+        )
         print("✅ Dataset created.")
         break
 
@@ -37,7 +56,7 @@ for attempt in range(5):
 # Upload dataset
 api.upload_folder(
     folder_path="predictive_maintenance/data",
-    repo_id=repo_id,
-    repo_type=repo_type,
-    token=HF_TOKEN
+    repo_id=HF_DATASET_REPO,
+    repo_type=HF_DATASET_TYPE
 )
+print("✅ Dataset uploaded successfully.")
