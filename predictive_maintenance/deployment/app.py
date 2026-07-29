@@ -131,9 +131,20 @@ if st.button("Run Diagnostics", use_container_width=True):
 
     prediction_proba = model.predict_proba(input_data)[0, 1]
     healthy_prob = (1 - prediction_proba) * 100
-    
-    st.subheader("Diagnostic Results")
-    
+
+    st.markdown(
+        """
+        <h3 style="
+            text-align:center;
+            color:#1F4E79;
+            margin-top:10px;
+            margin-bottom:15px;">
+            Diagnostic Results
+        </h3>
+        """,
+        unsafe_allow_html=True
+    )
+
     # Display prediction probability
     col1, col2 = st.columns(2)
 
@@ -150,8 +161,6 @@ if st.button("Run Diagnostics", use_container_width=True):
             "Normal Operation Probability",
             f"{healthy_prob:.2f}%"
         )
-
-    st.progress(float(prediction_proba), text="Model-estimated maintenance probability")
 
     # Risk classification
     if prediction_proba < LOW_RISK_THRESHOLD:
@@ -198,11 +207,11 @@ if st.button("Run Diagnostics", use_container_width=True):
     - Check fuel pressure
     - Perform a complete engine inspection
     """)
-        
+
     st.divider()
 
     with st.expander("View Submitted Sensor Readings"):
-      
+
         sensor_df = (
             input_data.T
             .rename(columns={0: "Reading"})

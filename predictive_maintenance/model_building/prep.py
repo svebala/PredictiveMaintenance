@@ -24,6 +24,10 @@ maintenance_dataset.columns = maintenance_dataset.columns.str.lower().str.replac
 # Handle Missing Values
 numeric_cols = maintenance_dataset.select_dtypes(include=["int64", "float64"]).columns
 
+# Remove duplicate records (if exist)
+maintenance_dataset = maintenance_dataset.drop_duplicates().reset_index(drop=True)
+print(f"Dataset shape after duplicate removals: {maintenance_dataset.shape}")
+
 # Numerical columns -> Median Imputation
 for col in numeric_cols:
     maintenance_dataset[col] = maintenance_dataset[col].fillna(maintenance_dataset[col].median())
