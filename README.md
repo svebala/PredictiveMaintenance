@@ -32,5 +32,54 @@ By implementing a robust predictive maintenance system, this solution can lead t
 * **Fuel_Pressure:** The pressure at which fuel is supplied to the engine, critical for proper combustion. It is defined in bar or kilopascals (kPa) 
 * **Coolant_Pressure:** The pressure of the engine coolant, affecting engine temperature regulation. It is defined in bar or kilopascals (kPa) 
 * **Lub_Oil_Temperature:** The temperature of the lubricating oil, which impacts viscosity and engine performance. It is defined in degrees Celsius (°C) 
-* **Coolant_Temperature:** The temperature of the engine coolant, crucial for preventing overheating. It is defined in degrees Celsius (°C) 
+* **Coolant_Temperature:** The temperature of the engine coolant, crucial for preventing overheating. It is defined in degrees Celsius (°C)
+
+### Target Variable
+
 * **Engine_Condition:** A categorical or numerical label representing the health of the engine, potentially indicating normal operation or various levels of wear and failure risks. It is defined as a categorical variable (0/1) representing a state such as "0 = Off/False/Active" and "1 = On/True/Faulty"
+
+## Technology Stack
+
+* **Programming Language**: Python
+* **Machine Learning**: Scikit-learn
+* **Version Control**: Git & GitHub
+* **CI/CD Automation**: GitHub Actions
+* **MLOps Practices**: Automated training, testing, and deployment readiness
+
+## Project Structure
+
+```text
+PredictiveMaintenance/
+│
+├── .github/
+│   └── workflows/
+│       └── pipeline.yml                 # GitHub Actions CI/CD pipeline
+│
+├── predictive_maintenance/
+│   │
+│   ├── __init__.py                      # Makes project a Python package
+│   ├── config.py                        # Global configuration (training pipeline)
+│   ├── requirements.txt                 # Dependencies for training/MLOps
+│   │
+│   ├── data/
+│   │   └── engine_data.csv              # Raw engine dataset
+│   │
+│   ├── model_building/
+│   │   ├── __init__.py
+│   │   ├── data_register.py             # Upload raw dataset to Hugging Face Dataset Hub
+│   │   ├── prep.py                      # Data cleaning, preprocessing & train/test split
+│   │   └── train.py                     # Model training, MLflow tracking & model upload
+│   │
+│   ├── deployment/
+│   │   ├── __init__.py
+│   │   ├── app.py                       # Streamlit inference application
+│   │   ├── config.py                    # Deployment-specific configuration
+│   │   ├── Dockerfile                   # Container for Hugging Face Space
+│   │   └── requirements.txt             # Deployment dependencies
+│   │
+│   └── hosting/
+│       ├── __init__.py
+│       └── hosting.py                   # Creates/updates Hugging Face Space
+│
+└── README.md                            # Project documentation
+```
