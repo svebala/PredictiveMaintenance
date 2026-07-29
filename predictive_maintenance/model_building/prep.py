@@ -28,6 +28,7 @@ from predictive_maintenance.config import (
     XTEST_FILE,
     YTRAIN_FILE,
     YTEST_FILE,
+    DATASET_FILENAME,
 )
 
 # Get token information
@@ -38,12 +39,12 @@ if not HF_TOKEN:
 api = HfApi(token=HF_TOKEN)
 
 # Load dataset from Hugging Face
-maintenance_dataset = pd.read_csv(HF_DATASET_PATH/{DATASET_FILENAME})
+maintenance_dataset = pd.read_csv(f"{HF_DATASET_PATH}/{DATASET_FILENAME}")
 print("Dataset loaded successfully from Hugging Face.")
 print(f"Initial Dataset Shape: {maintenance_dataset.shape}")
 
 # Convert all attribute names to small letter and replace spaces with underscores
-maintenance_dataset.columns = maintenance_dataset.columns.str.lower().str.replace(' ', '_')
+maintenance_dataset.columns = maintenance_dataset.columns.str.lower().str.replace(' ', '_', regex=False)
 
 # Handle Missing Values
 numeric_cols = maintenance_dataset.select_dtypes(include="number").columns
