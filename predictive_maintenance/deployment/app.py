@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 from huggingface_hub import hf_hub_download
 
 # import constants from config file
-from predictive_maintenance.config import (
+from config import (
     LOW_RISK_THRESHOLD,
     CLASSIFICATION_THRESHOLD,
     TIMEZONE,
