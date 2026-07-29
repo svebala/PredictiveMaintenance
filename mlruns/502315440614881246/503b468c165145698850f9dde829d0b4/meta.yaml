@@ -1,0 +1,14 @@
+artifact_uri: mlflow-artifacts:/502315440614881246/503b468c165145698850f9dde829d0b4/artifacts
+end_time: 1785333753218
+entry_point_name: ''
+experiment_id: '502315440614881246'
+lifecycle_stage: active
+run_id: 503b468c165145698850f9dde829d0b4
+run_name: able-toad-733
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1785333752577
+status: 3
+tags: []
+user_id: root

@@ -1,0 +1,14 @@
+artifact_uri: mlflow-artifacts:/502315440614881246/fecda05e629a48309a222e94f20048e0/artifacts
+end_time: 1785333723604
+entry_point_name: ''
+experiment_id: '502315440614881246'
+lifecycle_stage: active
+run_id: fecda05e629a48309a222e94f20048e0
+run_name: wise-foal-126
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1785333722955
+status: 3
+tags: []
+user_id: root

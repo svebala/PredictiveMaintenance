@@ -1,0 +1,14 @@
+artifact_uri: mlflow-artifacts:/502315440614881246/1798514d8cc1438a9b25680ad11fbbe8/artifacts
+end_time: 1785333740380
+entry_point_name: ''
+experiment_id: '502315440614881246'
+lifecycle_stage: active
+run_id: 1798514d8cc1438a9b25680ad11fbbe8
+run_name: capable-owl-604
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1785333739718
+status: 3
+tags: []
+user_id: root

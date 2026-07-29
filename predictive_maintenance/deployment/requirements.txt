@@ -2,8 +2,8 @@
 pandas==2.2.2
 
 # Machine learning
-scikit-learn==1.6.0
-xgboost==2.1.4
+scikit-learn==1.6.1
+xgboost==3.3.0
 joblib==1.5.1
 
 # Deployment

@@ -1,0 +1,6 @@
+artifact_location: mlflow-artifacts:/502315440614881246
+creation_time: 1785333652309
+experiment_id: '502315440614881246'
+last_update_time: 1785333652309
+lifecycle_stage: active
+name: mlops-predictive-maintenance-dev

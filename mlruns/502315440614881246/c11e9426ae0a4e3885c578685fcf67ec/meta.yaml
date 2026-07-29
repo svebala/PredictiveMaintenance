@@ -1,0 +1,14 @@
+artifact_uri: mlflow-artifacts:/502315440614881246/c11e9426ae0a4e3885c578685fcf67ec/artifacts
+end_time: 1785333717250
+entry_point_name: ''
+experiment_id: '502315440614881246'
+lifecycle_stage: active
+run_id: c11e9426ae0a4e3885c578685fcf67ec
+run_name: rebellious-fox-264
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1785333716635
+status: 3
+tags: []
+user_id: root

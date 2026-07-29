@@ -1,0 +1,14 @@
+artifact_uri: mlflow-artifacts:/502315440614881246/783eea0c74b34cddb8b721df320ff6ea/artifacts
+end_time: 1785333737953
+entry_point_name: ''
+experiment_id: '502315440614881246'
+lifecycle_stage: active
+run_id: 783eea0c74b34cddb8b721df320ff6ea
+run_name: upset-crab-620
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1785333737334
+status: 3
+tags: []
+user_id: root

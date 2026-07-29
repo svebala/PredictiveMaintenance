@@ -1,0 +1,14 @@
+artifact_uri: mlflow-artifacts:/502315440614881246/1de04ee94fab4e5983ae3d5bc5d0893f/artifacts
+end_time: 1785333732467
+entry_point_name: ''
+experiment_id: '502315440614881246'
+lifecycle_stage: active
+run_id: 1de04ee94fab4e5983ae3d5bc5d0893f
+run_name: mercurial-panda-941
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1785333731826
+status: 3
+tags: []
+user_id: root

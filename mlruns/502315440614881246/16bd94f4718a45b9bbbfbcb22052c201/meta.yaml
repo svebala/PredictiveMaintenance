@@ -1,0 +1,14 @@
+artifact_uri: mlflow-artifacts:/502315440614881246/16bd94f4718a45b9bbbfbcb22052c201/artifacts
+end_time: 1785333710832
+entry_point_name: ''
+experiment_id: '502315440614881246'
+lifecycle_stage: active
+run_id: 16bd94f4718a45b9bbbfbcb22052c201
+run_name: valuable-slug-886
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1785333710189
+status: 3
+tags: []
+user_id: root

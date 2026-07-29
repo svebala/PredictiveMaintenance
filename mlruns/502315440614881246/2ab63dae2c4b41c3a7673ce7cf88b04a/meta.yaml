@@ -1,0 +1,14 @@
+artifact_uri: mlflow-artifacts:/502315440614881246/2ab63dae2c4b41c3a7673ce7cf88b04a/artifacts
+end_time: 1785333735597
+entry_point_name: ''
+experiment_id: '502315440614881246'
+lifecycle_stage: active
+run_id: 2ab63dae2c4b41c3a7673ce7cf88b04a
+run_name: vaunted-pug-972
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1785333734968
+status: 3
+tags: []
+user_id: root

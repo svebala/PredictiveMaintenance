@@ -1,0 +1,14 @@
+artifact_uri: mlflow-artifacts:/502315440614881246/b26af0ed9747402ba309d1716caf00cf/artifacts
+end_time: 1785333754008
+entry_point_name: ''
+experiment_id: '502315440614881246'
+lifecycle_stage: active
+run_id: b26af0ed9747402ba309d1716caf00cf
+run_name: luxuriant-quail-442
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1785333753379
+status: 3
+tags: []
+user_id: root
