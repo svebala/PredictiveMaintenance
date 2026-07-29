@@ -89,10 +89,22 @@ def load_model():
         repo_id=HF_MODEL_REPO,
         filename=MODEL_FILENAME
     )
-    return joblib.load(model_path)
+    model = joblib.load(model_path)
+
+    st.sidebar.success("✅ Model Loaded")
+    st.sidebar.write(type(model).__name__)
+
+    return model
 
 try:
     model = load_model()
+    with st.sidebar.expander("Model Information"):
+        st.write("Model Type:", type(model).__name__)
+        if hasattr(model, "named_steps"):
+            st.write("Pipeline Steps")
+
+            for name, step in model.named_steps.items():
+                st.write(f"• {name}: {type(step).__name__}")
 except Exception as e:
     st.error("Unable to load prediction model.")
     st.exception(e)

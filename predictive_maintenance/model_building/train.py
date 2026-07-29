@@ -10,7 +10,7 @@ from sklearn.compose import make_column_transformer
 from sklearn.pipeline import make_pipeline
 
 # for model training, tuning, and evaluation
-import xgboost as xgb
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report
 
@@ -84,25 +84,24 @@ preprocessor = make_column_transformer(
     (StandardScaler(), numeric_features)
 )
 
-# Define base XGBoost model
-xgb_model = xgb.XGBClassifier(
-    scale_pos_weight=class_weight,
+# Define base Random Forest model
+rf_model = RandomForestClassifier(
+    class_weight="balanced",
     random_state=RANDOM_STATE,
     n_jobs=N_JOBS,
 )
 
 # Define hyperparameter grid
 param_grid = {
-    "xgbclassifier__n_estimators": [100, 200, 300],       # number of tree to build
-    "xgbclassifier__max_depth": [3, 5, 7],                # maximum depth of each tree
-    "xgbclassifier__colsample_bytree": [0.4, 0.5, 0.6],   # percentage of attributes to be considered (randomly) for each tree
-    "xgbclassifier__colsample_bylevel": [0.4, 0.5, 0.6],  # percentage of attributes to be considered (randomly) for each level of a tree
-    "xgbclassifier__learning_rate": [0.01, 0.05, 0.1],    # learning rate
-    "xgbclassifier__reg_lambda": [0.4, 0.5, 0.6],         # L2 regularization factor
+    "randomforestclassifier__n_estimators": [100, 200, 300],
+    "randomforestclassifier__max_depth": [10, 20, None],
+    "randomforestclassifier__min_samples_split": [2, 5, 10],
+    "randomforestclassifier__min_samples_leaf": [1, 2, 4],
+    "randomforestclassifier__max_features": ["sqrt", "log2"],
 }
 
 # Model pipeline
-model_pipeline = make_pipeline(preprocessor, xgb_model)
+model_pipeline = make_pipeline(preprocessor, rf_model)
 
 # Start MLflow run
 with mlflow.start_run():
@@ -145,18 +144,19 @@ with mlflow.start_run():
     # Store and evaluate the best model
     best_model = grid_search.best_estimator_
 
-    classifier = best_model.named_steps["xgbclassifier"]
+    classifier = best_model.named_steps["randomforestclassifier"]
 
     print("=" * 60)
     print("Model Information")
     print("=" * 60)
-    print("Estimator :", classifier)
-    print("Classes   :", classifier.classes_)
-    print("n_classes :", classifier.n_classes_)
-    print("Objective :", classifier.get_xgb_params().get("objective"))
-    print("Booster   :", classifier.get_xgb_params().get("booster"))
-    print("Tree Method:", classifier.get_xgb_params().get("tree_method"))
-    print("n_jobs    :", classifier.get_xgb_params().get("n_jobs"))
+    print("Estimator      :", classifier)
+    print("Classes        :", classifier.classes_)
+    print("n_estimators   :", classifier.n_estimators)
+    print("Max Depth      :", classifier.max_depth)
+    print("Min Samples Split :", classifier.min_samples_split)
+    print("Min Samples Leaf  :", classifier.min_samples_leaf)
+    print("Max Features      :", classifier.max_features)
+    print("n_jobs         :", classifier.n_jobs)
     print("=" * 60)
 
     y_pred_train_proba = best_model.predict_proba(Xtrain)[:, 1]
