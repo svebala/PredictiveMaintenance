@@ -3,6 +3,14 @@ Trains the predictive maintenance model,
 tracks experiments with MLflow,
 and uploads the trained model to Hugging Face.
 """
+import xgboost
+import sklearn
+
+print("=" * 50)
+print("Training Environment")
+print(f"XGBoost Version     : {xgboost.__version__}")
+print(f"Scikit-learn Version: {sklearn.__version__}")
+print("=" * 50)
 
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
