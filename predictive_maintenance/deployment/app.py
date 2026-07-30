@@ -215,17 +215,17 @@ if st.button("Run Diagnostics", use_container_width=True):
     - Perform a complete engine inspection
     """)
 
-    st.divider()
+    # st.divider()
 
-    with st.expander("View Submitted Sensor Readings"):
+    # with st.expander("View Submitted Sensor Readings"):
 
-        sensor_df = (
-            input_data.T
-            .rename(columns={0: "Reading"})
-            .rename_axis("Sensor")
-        )
-        sensor_df.rename(index=SENSOR_LABELS, inplace=True)
-        st.dataframe(sensor_df, use_container_width=True)
+        # sensor_df = (
+        #     input_data.T
+        #     .rename(columns={0: "Reading"})
+        #     .rename_axis("Sensor")
+        # )
+        # sensor_df.rename(index=SENSOR_LABELS, inplace=True)
+        # st.dataframe(sensor_df, use_container_width=True)
 
     st.caption(
         f"Diagnostics generated on: "

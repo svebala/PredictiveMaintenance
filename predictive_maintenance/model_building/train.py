@@ -90,6 +90,7 @@ xgb_model = xgb.XGBClassifier(
     random_state=RANDOM_STATE,
     n_jobs=N_JOBS,
     eval_metric="logloss",
+    verbose=2,
 )
 
 # Define hyperparameter grid
@@ -184,6 +185,9 @@ with mlflow.start_run():
         "test_f1-score": test_report['1']['f1-score']
     })
 
+    print("\nBest Parameters")
+    print(grid_search.best_params_)
+    print(f"Best CV Recall: {grid_search.best_score_:.4f}")
     print("\nTraining Performance")
     print(classification_report(ytrain, y_pred_train))
 
