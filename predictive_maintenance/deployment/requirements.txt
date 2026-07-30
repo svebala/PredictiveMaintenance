@@ -1,10 +1,13 @@
-# Data processing
+# Data Processing
 pandas==2.3.1
 
 # Machine Learning
 scikit-learn==1.6.0
 joblib==1.5.1
+xgboost==2.1.4
 
 # Deployment
 streamlit==1.47.1
+
+# Hugging Face
 huggingface_hub==0.34.4

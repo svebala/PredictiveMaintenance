@@ -10,7 +10,7 @@ from sklearn.compose import make_column_transformer
 from sklearn.pipeline import make_pipeline
 
 # for model training, tuning, and evaluation
-from sklearn.ensemble import RandomForestClassifier
+import xgboost as xgb
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report
 
@@ -69,14 +69,14 @@ YTEST_PATH = f"{HF_DATASET_PATH}/{YTEST_FILE}"
 
 Xtrain = pd.read_csv(XTRAIN_PATH)
 Xtest = pd.read_csv(XTEST_PATH)
-ytrain = pd.read_csv(YTRAIN_PATH)
-ytest = pd.read_csv(YTEST_PATH)
+ytrain = pd.read_csv(YTRAIN_PATH).squeeze()
+ytest = pd.read_csv(YTEST_PATH).squeeze()
 
 # Ensure lists only contain columns that actually exist after dropping unwanted ones
 numeric_features = [col for col in NUMERIC_FEATURES if col in Xtrain.columns]
 
 # Set the class weight to handle class imbalance
-class_counts = ytrain.squeeze().value_counts()
+class_counts = ytrain.value_counts()
 class_weight = class_counts.loc[0] / class_counts.loc[1]
 
 # Define the preprocessing steps
@@ -84,24 +84,26 @@ preprocessor = make_column_transformer(
     (StandardScaler(), numeric_features)
 )
 
-# Define base Random Forest model
-rf_model = RandomForestClassifier(
-    class_weight="balanced",
+# Define base XGBoost model
+xgb_model = xgb.XGBClassifier(
+    scale_pos_weight=class_weight,
     random_state=RANDOM_STATE,
     n_jobs=N_JOBS,
+    eval_metric="logloss",
 )
 
 # Define hyperparameter grid
 param_grid = {
-    "randomforestclassifier__n_estimators": [100, 200, 300],
-    "randomforestclassifier__max_depth": [10, 20, None],
-    "randomforestclassifier__min_samples_split": [2, 5, 10],
-    "randomforestclassifier__min_samples_leaf": [1, 2, 4],
-    "randomforestclassifier__max_features": ["sqrt", "log2"],
+    "xgbclassifier__n_estimators": [75, 100],
+    "xgbclassifier__max_depth": [3, 5],
+    "xgbclassifier__colsample_bytree": [0.5, 0.6],
+    "xgbclassifier__colsample_bylevel": [0.5, 0.6],
+    "xgbclassifier__learning_rate": [0.05, 0.1],
+    "xgbclassifier__reg_lambda": [0.5, 0.6],
 }
 
 # Model pipeline
-model_pipeline = make_pipeline(preprocessor, rf_model)
+model_pipeline = make_pipeline(preprocessor, xgb_model)
 
 # Start MLflow run
 with mlflow.start_run():
@@ -144,19 +146,21 @@ with mlflow.start_run():
     # Store and evaluate the best model
     best_model = grid_search.best_estimator_
 
-    classifier = best_model.named_steps["randomforestclassifier"]
+    classifier = best_model.named_steps["xgbclassifier"]
 
     print("=" * 60)
     print("Model Information")
     print("=" * 60)
-    print("Estimator      :", classifier)
-    print("Classes        :", classifier.classes_)
-    print("n_estimators   :", classifier.n_estimators)
-    print("Max Depth      :", classifier.max_depth)
-    print("Min Samples Split :", classifier.min_samples_split)
-    print("Min Samples Leaf  :", classifier.min_samples_leaf)
-    print("Max Features      :", classifier.max_features)
-    print("n_jobs         :", classifier.n_jobs)
+    print("Estimator :", classifier)
+    print("Classes   :", classifier.classes_)
+    print("n_classes :", classifier.n_classes_)
+    print("Objective :", classifier.get_xgb_params().get("objective"))
+    print("Booster   :", classifier.get_xgb_params().get("booster"))
+    print("Tree Method:", classifier.get_xgb_params().get("tree_method"))
+    print("n_jobs    :", classifier.get_xgb_params().get("n_jobs"))
+    print("Learning Rate :", classifier.learning_rate)
+    print("Max Depth     :", classifier.max_depth)
+    print("n_estimators  :", classifier.n_estimators)
     print("=" * 60)
 
     y_pred_train_proba = best_model.predict_proba(Xtrain)[:, 1]
@@ -179,6 +183,12 @@ with mlflow.start_run():
         "test_recall": test_report['1']['recall'],
         "test_f1-score": test_report['1']['f1-score']
     })
+
+    print("\nTraining Performance")
+    print(classification_report(ytrain, y_pred_train))
+
+    print("\nTest Performance")
+    print(classification_report(ytest, y_pred_test))
 
     # Save the model locally
     joblib.dump(best_model, MODEL_FILENAME)
