@@ -1,0 +1,44 @@
+/* Run Diagnostics button */
+div.stButton > button:first-child {
+    background-color: #F57C00;
+    color: white;
+    border-radius: 8px;
+    border: none;
+    font-size: 18px;
+    font-weight: 600;
+    height: 3em;
+}
+
+/* Button hover */
+div.stButton > button:first-child:hover {
+    background-color: #EF6C00;
+    color: white;
+}
+
+/* Page title */
+h1 {
+    color: #1F4E79;
+}
+
+/* Sub headings */
+h2, h3 {
+    color: #1F4E79;
+}
+
+/* Success box */
+div[data-testid="stSuccess"] {
+    background-color: #E8F5E9;
+    border-left: 6px solid #2E7D32;
+}
+
+/* Warning box */
+div[data-testid="stWarning"] {
+    background-color: #FFF8E1;
+    border-left: 6px solid #F9A825;
+}
+
+/* Error box */
+div[data-testid="stError"] {
+    background-color: #FFEBEE;
+    border-left: 6px solid #C62828;
+}
