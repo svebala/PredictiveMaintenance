@@ -10,7 +10,7 @@ MODEL_FILENAME = "engine_predictive_maintenance_model.joblib"
 
 # Decision Thresholds
 LOW_RISK_THRESHOLD = 0.20
-CLASSIFICATION_THRESHOLD = 0.35
+CLASSIFICATION_THRESHOLD = 0.45
 
 # Timezone
 TIMEZONE = ZoneInfo("Asia/Kolkata")
