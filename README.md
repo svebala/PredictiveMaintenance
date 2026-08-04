@@ -47,39 +47,55 @@ By implementing a robust predictive maintenance system, this solution can lead t
 * **MLOps Practices**: Automated training, testing, and deployment readiness
 
 ## Project Structure
+The Predictive Maintenance project follows a modular architecture where data processing, model development, deployment, hosting, and utility functions are organized into dedicated packages. This separation of concerns improves code readability, maintainability, scalability, and supports CI/CD-based MLOps workflows.
 
 ```text
 PredictiveMaintenance/
 │
 ├── .github/
 │   └── workflows/
-│       └── pipeline.yml                 # GitHub Actions CI/CD pipeline
+│       └── pipeline.yml                # GitHub Actions workflow for CI/CD automation.
 │
 ├── predictive_maintenance/
 │   │
-│   ├── __init__.py                      # Makes project a Python package
-│   ├── config.py                        # Global configuration (training pipeline)
-│   ├── requirements.txt                 # Dependencies for training/MLOps
-│   │
 │   ├── data/
-│   │   └── engine_data.csv              # Raw engine dataset
-│   │
-│   ├── model_building/
-│   │   ├── __init__.py
-│   │   ├── data_register.py             # Upload raw dataset to Hugging Face Dataset Hub
-│   │   ├── prep.py                      # Data cleaning, preprocessing & train/test split
-│   │   └── train.py                     # Model training, MLflow tracking & model upload
+│   │   └── engine_data.csv             # Raw predictive maintenance dataset.
 │   │
 │   ├── deployment/
-│   │   ├── __init__.py
-│   │   ├── app.py                       # Streamlit inference application
-│   │   ├── config.py                    # Deployment-specific configuration
-│   │   ├── Dockerfile                   # Container for Hugging Face Space
-│   │   └── requirements.txt             # Deployment dependencies
+│   │   ├── app.py                      # Streamlit web application for engine failure prediction.
+│   │   ├── config.py                   # Deployment-specific configuration and application constants.
+│   │   ├── requirements.txt            # Python dependencies required for deployment.
+│   │   ├── Dockerfile                  # Docker configuration for containerized deployment.
+│   │   ├── __init__.py                 # Marks the deployment directory as a Python package.
+│   │   │
+│   │   ├── assets/
+│   │   │   └── styles.css              # Custom CSS stylesheet for Streamlit user interface.
+│   │   │
+│   │   └── utils/
+│   │       ├── __init__.py             # Marks the deployment utilities directory as a Python package.
+│   │       ├── model_utils.py          # Utility functions for loading and displaying the trained model.
+│   │       ├── ui_utils.py             # Utility functions for UI components, sensor inputs, and recommendations.
+│   │       └── visualization_utils.py  # Utility functions for rendering custom risk visualization components.
 │   │
-│   └── hosting/
-│       ├── __init__.py
-│       └── hosting.py                   # Creates/updates Hugging Face Space
+│   ├── hosting/
+│   │   ├── __init__.py                 # Marks the hosting directory as a Python package.
+│   │   └── hosting.py                  # Hosts the trained model for inference and prediction services.
+│   │
+│   ├── model_building/
+│   │   ├── __init__.py                 # Marks the model building directory as a Python package.
+│   │   ├── data_register.py            # Downloads, validates, and registers datasets from Hugging Face.
+│   │   ├── prep.py                     # Performs data preprocessing, feature engineering, and train-test split.
+│   │   └── train.py                    # Trains, tunes, evaluates, tracks, and publishes the XGBoost model.
+│   │
+│   ├── utils/
+│   │   ├── __init__.py                 # Marks the shared utilities directory as a Python package.
+│   │   ├── artifact_utils.py           # Generates and saves model evaluation artifacts and visualizations.
+│   │   ├── data_utils.py               # Helper functions for loading and validating datasets.
+│   │   ├── evaluation_utils.py         # Utility functions for model prediction, evaluation, and reporting.
+│   │   └── hf_utils.py                 # Helper functions for interacting with Hugging Face repositories.
+│   │
+│   ├── __init__.py                     # Marks the predictive_maintenance directory as a Python package.
+│   ├── config.py                       # Central configuration file containing project constants and settings.
+│   └── requirements.txt                # Python dependencies required for model development and training.
 │
-└── README.md                            # Project documentation
-```
+└── README.md                           # Project overview, setup instructions, architecture, and usage guide.
