@@ -351,7 +351,7 @@ if st.button("Run Diagnostics", use_container_width=True):
 
     # Display prediction probability
     col1, col2, col3 = st.columns([1, 2, 1])
-    
+
     with col1:
         st.markdown("<div style='margin-top:35px'></div>", unsafe_allow_html=True)
         st.metric(
@@ -360,7 +360,7 @@ if st.button("Run Diagnostics", use_container_width=True):
             delta=f"{prediction_proba - CLASSIFICATION_THRESHOLD:+.2%}",
             delta_color="inverse"
         )
-    
+
     with col2:
         st.markdown(
             """
@@ -376,14 +376,14 @@ if st.button("Run Diagnostics", use_container_width=True):
             """,
             unsafe_allow_html=True
         )
-    
+
     with col3:
         st.markdown("<div style='margin-top:35px'></div>", unsafe_allow_html=True)
         st.metric(
             label="Healthy Probability",
             value=f"{healthy_prob:.2f}%"
         )
-        
+
     risk_progress_bar(prediction_proba)
 
     # Risk classification
@@ -436,7 +436,7 @@ if st.button("Run Diagnostics", use_container_width=True):
         f"Generated on: "
         f"{datetime.now(TIMEZONE).strftime('%d %b %Y, %I:%M %p')} IST"
     )
-    
+
 st.divider()
 
 st.caption(

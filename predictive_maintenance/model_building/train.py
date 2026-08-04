@@ -4,32 +4,44 @@ tracks experiments with MLflow,
 and uploads the trained model to Hugging Face.
 """
 
-import pandas as pd
-from sklearn.preprocessing import StandardScaler
-from sklearn.compose import make_column_transformer
-from sklearn.pipeline import make_pipeline
-
-# for model training, tuning, and evaluation
-import xgboost as xgb
-from sklearn.model_selection import GridSearchCV
-from sklearn.metrics import classification_report
-
-# for model serialization
+import logging
 import joblib
-
-import time
-
-# for hugging face space authentication to upload files
-from huggingface_hub import HfApi, create_repo
-from huggingface_hub.utils import (
-    RepositoryNotFoundError,
-    HfHubHTTPError,
-)
 import mlflow
+import xgboost as xgb
+from pathlib import Path
+
+from huggingface_hub import HfApi
+from sklearn.compose import make_column_transformer
+
+from sklearn.model_selection import (
+    RandomizedSearchCV,
+)
+
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+
+from predictive_maintenance.utils.data_utils import load_dataset
+
+from predictive_maintenance.utils.evaluation_utils import (
+    predict_labels,
+    evaluate_predictions,
+    log_model_information,
+)
+
+from predictive_maintenance.utils.hf_utils import (
+    ensure_repo_exists,
+    upload_file,
+    upload_directory,
+)
+
+from predictive_maintenance.utils.artifact_utils import (
+    save_artifacts,
+)
 
 # import constants from config file
 from predictive_maintenance.config import (
     HF_DATASET_REPO,
+    HF_DATASET_TYPE,
     HF_MODEL_REPO,
     HF_MODEL_TYPE,
     HF_TOKEN,
@@ -49,7 +61,20 @@ from predictive_maintenance.config import (
     MLFLOW_ARTIFACT_PATH,
     NUMERIC_FEATURES,
     SCORING_METRIC,
+    ARTIFACT_ROOT,
+    N_ITER,
+    TOP_FEATURES,
+    FIGSIZE,
+    SAVE_PLOTS,
+    UPLOAD_ARTIFACTS,
+    )
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s"
 )
+
+logger = logging.getLogger(__name__)
 
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
@@ -67,21 +92,45 @@ XTEST_PATH = f"{HF_DATASET_PATH}/{XTEST_FILE}"
 YTRAIN_PATH = f"{HF_DATASET_PATH}/{YTRAIN_FILE}"
 YTEST_PATH = f"{HF_DATASET_PATH}/{YTEST_FILE}"
 
-Xtrain = pd.read_csv(XTRAIN_PATH)
-Xtest = pd.read_csv(XTEST_PATH)
-ytrain = pd.read_csv(YTRAIN_PATH).squeeze()
-ytest = pd.read_csv(YTEST_PATH).squeeze()
+Xtrain = load_dataset(XTRAIN_PATH)
+Xtest = load_dataset(XTEST_PATH)
+
+ytrain = load_dataset(YTRAIN_PATH).squeeze()
+ytest = load_dataset(YTEST_PATH).squeeze()
+
+if Xtrain.empty:
+    raise ValueError("Training dataset is empty.")
+
+if Xtest.empty:
+    raise ValueError("Test dataset is empty.")
+
+if ytrain.empty or ytest.empty:
+    raise ValueError("Target labels are empty.")
 
 # Ensure lists only contain columns that actually exist after dropping unwanted ones
-numeric_features = [col for col in NUMERIC_FEATURES if col in Xtrain.columns]
+missing_features = [
+    col for col in NUMERIC_FEATURES
+    if col not in Xtrain.columns
+]
+
+if missing_features:
+    logger.warning(
+        f"Missing numeric features: {missing_features}"
+    )
+
+numeric_features = [
+    col for col in NUMERIC_FEATURES
+    if col in Xtrain.columns
+]
 
 # Set the class weight to handle class imbalance
 class_counts = ytrain.value_counts()
 class_weight = class_counts.loc[0] / class_counts.loc[1]
 
-# Define the preprocessing steps
+# Define the preprocessing steps with passthrough for additional columns
 preprocessor = make_column_transformer(
-    (StandardScaler(), numeric_features)
+    (StandardScaler(), numeric_features),
+    remainder="passthrough"
 )
 
 # Define base XGBoost model
@@ -94,84 +143,102 @@ xgb_model = xgb.XGBClassifier(
 )
 
 # Define hyperparameter grid
-param_grid = {
-    "xgbclassifier__n_estimators": [75, 100],
-    "xgbclassifier__max_depth": [3, 5],
-    "xgbclassifier__colsample_bytree": [0.5, 0.6],
-    "xgbclassifier__colsample_bylevel": [0.5, 0.6],
-    "xgbclassifier__learning_rate": [0.05, 0.1],
-    "xgbclassifier__reg_lambda": [0.5, 0.6],
+param_distributions = {
+    "xgbclassifier__n_estimators": [100, 150, 200],
+    "xgbclassifier__max_depth": [3, 4, 5],                  # Shallowed trees limit memorization
+    "xgbclassifier__learning_rate": [0.01, 0.05, 0.1],
+    "xgbclassifier__subsample": [0.7, 0.8, 0.9],            # Introduces dataset row sampling variance
+    "xgbclassifier__colsample_bytree": [0.7, 0.8, 0.9],     # Introduces column feature sampling variance
+    "xgbclassifier__min_child_weight": [3, 5, 7],           # Higher minimum limits partition sizes
+    "xgbclassifier__gamma": [0.1, 0.2, 0.3],                # Enforces minimum loss reduction split barriers
+    "xgbclassifier__reg_alpha": [0.1, 0.5, 1.0],            # L1 Regularization penalizes complex nodes
+    "xgbclassifier__reg_lambda": [1.5, 2.0, 3.0]            # L2 Regularization penalizes large leaf weights
 }
 
 # Model pipeline
 model_pipeline = make_pipeline(preprocessor, xgb_model)
 
-# Start MLflow run
+# Ensure any active MLflow run is ended before starting a new one
+if mlflow.active_run():
+    mlflow.end_run()
+
+# Start Model Training & MLflow run
 with mlflow.start_run():
     # Hyperparameter tuning
-    grid_search = GridSearchCV(
+    search = RandomizedSearchCV(
         estimator=model_pipeline,
-        param_grid=param_grid,
+        param_distributions=param_distributions,
+        n_iter=N_ITER,
         cv=CV_FOLDS,
         scoring=SCORING_METRIC,
-        n_jobs=N_JOBS,
+        random_state=RANDOM_STATE,
+        n_jobs=N_JOBS
     )
-    grid_search.fit(Xtrain, ytrain)
+
+    logger.info("Running RandomizedSearchCV...")
+    search.fit(Xtrain, ytrain)
+    logger.info("Hyperparameter search completed.")
 
     # Log all parameter combinations and their mean test scores
-    cv_results = grid_search.cv_results_
-    for i in range(len(cv_results['params'])):
-        param_set = cv_results['params'][i]
-        mean_score = cv_results['mean_test_score'][i]
-        std_score = cv_results['std_test_score'][i]
+    results = search.cv_results_
+    for i in range(len(results['params'])):
+        param_set = results['params'][i]
+        mean_score = results['mean_test_score'][i]
+        std_score = results['std_test_score'][i]
 
         # Log each combination as a separate MLflow run
-        with mlflow.start_run(nested=True):
+        with mlflow.start_run(run_name="XGBoost_Training", nested=True):
             mlflow.log_params(param_set)
             mlflow.log_metric("mean_test_score", mean_score)
             mlflow.log_metric("std_test_score", std_score)
 
-    # Log best parameters separately in main run
-    mlflow.log_params(grid_search.best_params_)
-    mlflow.log_metric("best_cv_recall", grid_search.best_score_)
-    mlflow.log_param("scale_pos_weight", class_weight,)
+    # Log best hyperparameters
+    mlflow.log_params(search.best_params_)
+
+    mlflow.log_metric("best_cv_f1", search.best_score_)
+    mlflow.log_param("scale_pos_weight", class_weight)
 
     # Log model configuration
     mlflow.log_params({
-      "classification_threshold": CLASSIFICATION_THRESHOLD,
-      "cv_folds": CV_FOLDS,
-      "random_state": RANDOM_STATE,
-      "scoring_metric": SCORING_METRIC,
+        "classification_threshold": CLASSIFICATION_THRESHOLD,
+        "cv_folds": CV_FOLDS,
+        "random_state": RANDOM_STATE,
+        "scoring_metric": SCORING_METRIC,
     })
 
     # Store and evaluate the best model
-    best_model = grid_search.best_estimator_
+    best_model = search.best_estimator_
 
     classifier = best_model.named_steps["xgbclassifier"]
 
-    print("=" * 60)
-    print("Model Information")
-    print("=" * 60)
-    print("Estimator :", classifier)
-    print("Classes   :", classifier.classes_)
-    print("n_classes :", classifier.n_classes_)
-    print("Objective :", classifier.get_xgb_params().get("objective"))
-    print("Booster   :", classifier.get_xgb_params().get("booster"))
-    print("Tree Method:", classifier.get_xgb_params().get("tree_method"))
-    print("n_jobs    :", classifier.get_xgb_params().get("n_jobs"))
-    print("Learning Rate :", classifier.learning_rate)
-    print("Max Depth     :", classifier.max_depth)
-    print("n_estimators  :", classifier.n_estimators)
-    print("=" * 60)
+    log_model_information(classifier)
 
-    y_pred_train_proba = best_model.predict_proba(Xtrain)[:, 1]
-    y_pred_train = (y_pred_train_proba >= CLASSIFICATION_THRESHOLD).astype(int)
+    y_pred_train_proba, y_pred_train = predict_labels(
+        best_model,
+        Xtrain,
+        CLASSIFICATION_THRESHOLD,
+    )
 
-    y_pred_test_proba = best_model.predict_proba(Xtest)[:, 1]
-    y_pred_test = (y_pred_test_proba >= CLASSIFICATION_THRESHOLD).astype(int)
+    y_pred_test_proba, y_pred_test = predict_labels(
+        best_model,
+        Xtest,
+        CLASSIFICATION_THRESHOLD,
+    )
 
-    train_report = classification_report(ytrain, y_pred_train, output_dict=True)
-    test_report = classification_report(ytest, y_pred_test, output_dict=True)
+    train_report, train_report_text, _, _ = evaluate_predictions(
+        ytrain,
+        y_pred_train,
+        y_pred_train_proba,
+    )
+
+    test_report, test_report_text, test_auc, balanced_acc = evaluate_predictions(
+        ytest,
+        y_pred_test,
+        y_pred_test_proba,
+    )
+
+    mlflow.log_metric("test_auc", test_auc)
+    mlflow.log_metric("balanced_accuracy", balanced_acc)
 
     # Log the metrics for the best model
     mlflow.log_metrics({
@@ -185,57 +252,66 @@ with mlflow.start_run():
         "test_f1-score": test_report['1']['f1-score']
     })
 
-    print("\nBest Parameters")
-    print(grid_search.best_params_)
-    print(f"Best CV Recall: {grid_search.best_score_:.4f}")
-    print("\nTraining Performance")
-    print(classification_report(ytrain, y_pred_train))
+    logger.info(f"Best Parameters : {search.best_params_}")
+    logger.info(f"Best CV Score   : {search.best_score_:.4f}")
 
-    print("\nTest Performance")
-    print(classification_report(ytest, y_pred_test))
+    logger.info(
+        "Training Classification Report\n%s",
+        train_report_text,
+    )
+
+    logger.info(
+        "Test Classification Report\n%s",
+        test_report_text,
+    )
 
     # Save the model locally
     joblib.dump(best_model, MODEL_FILENAME)
 
     # Log the model artifact
     mlflow.log_artifact(MODEL_FILENAME, artifact_path=MLFLOW_ARTIFACT_PATH)
-    print(f"Model saved as artifact at: {MODEL_FILENAME}")
+    logger.info(f"Model saved as artifact at: {MODEL_FILENAME}")
+
+    artifact_dir = None
+
+    if SAVE_PLOTS:
+      artifact_dir = save_artifacts(
+          classifier=classifier,
+          search=search,
+          train_report=train_report,
+          test_report=test_report,
+          test_auc=test_auc,
+          balanced_acc=balanced_acc,
+          ytest=ytest,
+          y_pred_test=y_pred_test,
+          feature_names=Xtrain.columns,
+          artifact_root=ARTIFACT_ROOT,
+          top_features=TOP_FEATURES,
+          figsize=FIGSIZE,
+      )
+
+    if UPLOAD_ARTIFACTS and artifact_dir is not None:
+      upload_directory(
+          api=api,
+          artifact_dir=artifact_dir,
+          repo_id=HF_DATASET_REPO,
+          repo_type=HF_DATASET_TYPE,
+          run_id=artifact_dir.name,
+      )
 
     # Check if the model repository exists
-    for attempt in range(HF_MAX_RETRIES):
-        try:
-            api.repo_info(
-                repo_id=HF_MODEL_REPO,
-                repo_type=HF_MODEL_TYPE,
-            )
-            print(f"✅ Model '{HF_MODEL_REPO}' already exists.")
-            break
-
-        except RepositoryNotFoundError:
-            print(f"Model '{HF_MODEL_REPO}' not found. Creating...")
-            create_repo(
-                repo_id=HF_MODEL_REPO,
-                repo_type=HF_MODEL_TYPE,
-                private=False,
-                token=HF_TOKEN,
-                exist_ok=True,
-            )
-            print("✅ Model created.")
-            break
-
-        except HfHubHTTPError as e:
-            if e.response is not None and e.response.status_code == 429:
-                wait = 2 ** attempt
-                print(f"Rate limited. Retrying in {wait} seconds...")
-                time.sleep(wait)
-            else:
-                raise
+    ensure_repo_exists(
+        api=api,
+        repo_id=HF_MODEL_REPO,
+        repo_type=HF_MODEL_TYPE,
+        token=HF_TOKEN,
+        max_retries=HF_MAX_RETRIES,
+    )
 
     # Upload Model
-    api.upload_file(
-        path_or_fileobj=MODEL_FILENAME,
-        path_in_repo=MODEL_FILENAME,
+    upload_file(
+        api=api,
+        file_path=Path(MODEL_FILENAME),
         repo_id=HF_MODEL_REPO,
         repo_type=HF_MODEL_TYPE,
     )
-    print("✅ Model uploaded successfully.")

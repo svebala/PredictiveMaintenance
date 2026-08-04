@@ -50,7 +50,7 @@ TEST_SIZE = 0.20
 # Decision threshold used during deployment.
 # Lower than the default (0.50) to improve recall,
 # reducing the chance of missing faulty engines.
-CLASSIFICATION_THRESHOLD = 0.35
+CLASSIFICATION_THRESHOLD = 0.45
 
 LOW_RISK_THRESHOLD = 0.20
 CV_FOLDS = 5
@@ -74,3 +74,28 @@ SENSOR_LABELS = {
     "lub_oil_temp": "Lubricating Oil Temperature (°C)",
     "coolant_temp": "Coolant Temperature (°C)"
 }
+
+# Artifact Configuration
+# Root directory where all generated artifacts will be stored
+ARTIFACT_ROOT = "artifacts"
+
+# Number of random parameter combinations evaluated by RandomizedSearchCV
+N_ITER = 40
+
+# Number of most important features to display in feature importance plot
+TOP_FEATURES = 10
+
+# Default matplotlib figure size (width, height)
+FIGSIZE = (8, 6)
+
+# Save plots such as confusion matrix, ROC curve and feature importance
+SAVE_PLOTS = True
+
+# Upload generated artifacts to Hugging Face Dataset
+UPLOAD_ARTIFACTS = True
+
+# Model Metadata
+MODEL_METADATA_FILE = "model_metadata.json"
+METRICS_FILE = "metrics.json"
+PARAMS_FILE = "best_params.json"
+REPORT_FILE = "classification_report.txt"
